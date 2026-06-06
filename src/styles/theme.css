@@ -1,0 +1,46 @@
+:root {
+  /* ---- Brand palette (per brief) ---- */
+  --saffron: #F97316;        /* Deep Saffron — primary */
+  --saffron-700: #c2570c;
+  --saffron-50: #fff4ec;
+  --blue: #2563EB;           /* Trust Blue — secondary */
+  --blue-700: #1d4ed8;
+  --blue-50: #eef3ff;
+  --green: #16A34A;          /* Success Green */
+  --green-700: #15803d;
+  --green-50: #ecfdf3;
+
+  --ink: #111827;            /* Dark text */
+  --ink-2: #374151;
+  --muted: #6b7280;
+  --muted-2: #9ca3af;
+  --line: #e7e5e1;           /* warm hairline */
+  --line-2: #efece7;
+  --paper: #FAFAFA;          /* Light background */
+  --paper-2: #f3f1ec;        /* warm panel */
+  --white: #ffffff;
+
+  /* ---- Type ---- */
+  --font-display: 'Poppins', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-alt: 'Source Sans 3', 'Inter', sans-serif;
+
+  --h1: clamp(2.5rem, 5vw, 4.5rem);   /* 56–72px */
+  --h2: clamp(2rem, 3.4vw, 3rem);      /* 40–48px */
+  --h3: clamp(1.5rem, 2.2vw, 2rem);    /* 28–32px */
+  --body: 1.0625rem;                    /* 17px */
+
+  /* ---- Spacing & shape ---- */
+  --container: 1200px;
+  --container-wide: 1320px;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --radius-lg: 22px;
+
+  /* ---- Elevation (soft, never glassy) ---- */
+  --shadow-sm: 0 1px 2px rgba(17, 24, 39, .05), 0 1px 1px rgba(17, 24, 39, .04);
+  --shadow: 0 4px 16px rgba(17, 24, 39, .07), 0 1px 3px rgba(17, 24, 39, .05);
+  --shadow-lg: 0 18px 48px rgba(17, 24, 39, .12);
+
+  --ring: 0 0 0 3px rgba(37, 99, 235, .22);
+}

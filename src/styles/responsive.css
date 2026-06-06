@@ -1,0 +1,286 @@
+/* =====================================================================
+   MOBILE RESPONSIVE LAYER
+   Loaded last. Fills gaps for tablets and phones (down to 320px) without
+   disturbing the desktop layout. Mobile-first overrides, grouped by area.
+   ===================================================================== */
+
+/* ---- Global: never allow horizontal overflow ---- */
+html, body { overflow-x: hidden; max-width: 100%; }
+*, *::before, *::after { min-width: 0; } /* let flex/grid children shrink */
+img, svg, video, canvas, iframe { max-width: 100%; height: auto; }
+.container, .container-wide { width: 100%; }
+
+/* ============================================================
+   TABLET (<= 1024px)
+   ============================================================ */
+@media (max-width: 1024px) {
+  .section { padding-block: clamp(44px, 7vw, 80px); }
+  .container { padding-inline: 22px; }
+}
+
+/* ============================================================
+   LARGE PHONE / SMALL TABLET (<= 768px)
+   ============================================================ */
+@media (max-width: 768px) {
+  :root {
+    --h1: clamp(2.1rem, 8vw, 3rem);
+    --h2: clamp(1.7rem, 6vw, 2.3rem);
+    --h3: clamp(1.35rem, 5vw, 1.7rem);
+  }
+  .container { padding-inline: 18px; }
+  .section { padding-block: clamp(38px, 9vw, 60px); }
+
+  /* Stack any two-column inline grids that pages set via style="" */
+  .cd-grid { grid-template-columns: 1fr !important; gap: 28px !important; }
+  .cd-aside { position: static !important; }
+
+  /* Hero: drop the floating cards on small screens (they overlap text) */
+  .hero { padding-block: 28px; }
+  .hero__inner { gap: 32px; }
+  .hero__cta { gap: 10px; }
+  .hero__cta .btn { flex: 1 1 auto; }
+  .hero__media { max-width: 100%; margin-inline: auto; }
+  .hero__card { display: none; }
+  .hero__seals { gap: 14px 18px; }
+
+  /* Section headings: stack heading + action button */
+  .shead { flex-direction: column; align-items: flex-start; gap: 16px; }
+  .shead__text { max-width: 100%; }
+
+  /* Newsletter / generic 2-col promo blocks */
+  .newsletter { padding: 26px; }
+
+  /* Forms: full width, comfortable inputs */
+  .form-card { padding: 22px 18px; }
+  .row-2 { grid-template-columns: 1fr; gap: 0; }
+
+  /* Quote / testimonial cards */
+  .quote { padding: 22px; }
+
+  /* Tighten cause/product detail typographic blocks */
+  .cd-hero img { aspect-ratio: 16/10; }
+}
+
+/* ============================================================
+   PHONE (<= 600px)
+   ============================================================ */
+@media (max-width: 600px) {
+  .container { padding-inline: 16px; }
+
+  /* All multi-column card grids -> single column */
+  .grid-2, .grid-3, .grid-4,
+  .product-grid, .team-grid, .cert-grid,
+  .journey-grid, .vmv { grid-template-columns: 1fr !important; }
+
+  /* Impact stats: 2 across stays readable */
+  .impact-grid { grid-template-columns: 1fr 1fr; gap: 14px; }
+  .impact-cell { padding: 20px 14px; }
+
+  /* Trust strip: 2 across, centered */
+  .trust-grid { grid-template-columns: 1fr 1fr; }
+
+  /* Buttons: easier tap targets, allow wrapping rows */
+  .btn { padding: 12px 18px; }
+  .btn--lg { padding: 14px 20px; font-size: 1rem; }
+  .hero__cta { flex-direction: column; }
+  .hero__cta .btn { width: 100%; }
+
+  /* Page headers */
+  .page-head { padding-block: 32px; }
+  .page-head h1 { font-size: clamp(1.8rem, 8vw, 2.4rem); }
+
+  /* Filter pill rows scroll horizontally instead of wrapping into tall stacks */
+  .pill-row {
+    flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px; scrollbar-width: none;
+  }
+  .pill-row::-webkit-scrollbar { display: none; }
+  .filter-pill { flex: 0 0 auto; }
+
+  /* Stepper: keep numbers, hide labels already handled; tighten */
+  .stepper { margin-bottom: 26px; }
+  .amount-grid { grid-template-columns: 1fr 1fr; }
+
+  /* Logo wall denser */
+  .logo-wall { grid-template-columns: repeat(2, 1fr); }
+
+  /* Lightbox close button reachable */
+  .lightbox__close { top: 12px; right: 14px; }
+
+  /* Cause/Product detail gallery thumbs */
+  .cd-gallery { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+
+  /* Quote mark smaller */
+  .quote__mark { font-size: 2.2rem; }
+}
+
+/* ============================================================
+   SMALL PHONE (<= 430px)
+   ============================================================ */
+@media (max-width: 430px) {
+  .container { padding-inline: 14px; }
+  :root { --body: 1rem; }
+
+  .section { padding-block: 34px; }
+
+  /* Single-column everything that was 2-up */
+  .impact-grid { grid-template-columns: 1fr; }
+  .amount-grid { grid-template-columns: 1fr 1fr; }
+
+  /* Eyebrow + headings */
+  .eyebrow { font-size: .72rem; }
+
+  /* Cards: a touch less padding */
+  .card { border-radius: 12px; }
+  .ccard__body, .pcard__body, .story-card__body { padding: 16px; }
+
+  /* Footer: stack everything, generous spacing */
+  .footer { padding-top: 44px; }
+  .footer__grid { gap: 26px; }
+  .footer__bottom { flex-direction: column; align-items: flex-start; gap: 10px; }
+
+  /* Forms even tighter */
+  .form-card { padding: 18px 14px; border-radius: 16px; }
+
+  /* Receipt rows wrap cleanly */
+  .receipt-row { font-size: .88rem; }
+}
+
+/* ============================================================
+   VERY SMALL (<= 360px)
+   ============================================================ */
+@media (max-width: 360px) {
+  .amount-grid { grid-template-columns: 1fr; }
+  .trust-grid { grid-template-columns: 1fr; }
+  .impact-grid { grid-template-columns: 1fr; }
+  .svr-logo__mark { font-size: 1.7rem; }
+  .svr-logo__sub { font-size: .56rem; letter-spacing: .2em; }
+}
+
+/* ============================================================
+   TABLES — make every data table scroll horizontally on mobile
+   (wrap is in markup as overflow-x:auto; ensure min-width so cells
+   don't crush, and the scroll is smooth)
+   ============================================================ */
+@media (max-width: 760px) {
+  .dtable { min-width: 560px; }
+  /* wrappers around tables already use overflow-x:auto inline; reinforce */
+  .admin__panel, .card { -webkit-overflow-scrolling: touch; }
+}
+
+/* ============================================================
+   ADMIN — refine the collapsed mobile layout
+   ============================================================ */
+@media (max-width: 860px) {
+  /* horizontal-scrolling nav instead of a tall wrapped block */
+  .admin__nav {
+    flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; padding-bottom: 4px;
+  }
+  .admin__nav::-webkit-scrollbar { display: none; }
+  .admin__nav a { flex: 0 0 auto; white-space: nowrap; }
+  .admin__main { padding: 18px 14px; }
+  .admin__head h1 { font-size: 1.4rem; }
+}
+@media (max-width: 600px) {
+  /* KPI cards: 1 column reads better than cramped 2-up on small phones */
+  .admin__kpis { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .kpi { padding: 14px; }
+  .kpi__value { font-size: 1.2rem; }
+  /* modal nearly full-screen, uploader stacks */
+  .modal { width: 96vw; max-height: 94vh; border-radius: 16px; }
+  .modal__body { padding: 18px; }
+  .uploader { flex-direction: column; align-items: stretch; }
+  .modal__foot { flex-direction: column-reverse; }
+  .modal__foot .btn { width: 100%; }
+}
+@media (max-width: 380px) {
+  .admin__kpis { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   TAP TARGETS — ensure interactive elements are finger-friendly
+   ============================================================ */
+@media (max-width: 600px) {
+  .nav--main > a, .navdd__trigger { min-height: 44px; }
+  .filter-pill { min-height: 38px; display: inline-flex; align-items: center; }
+  .qty button { width: 40px; height: 44px; }
+  .icon-btn { width: 40px; height: 40px; }
+}
+
+/* ============================================================
+   HEADER / UTILITY BAR
+   ============================================================ */
+@media (max-width: 1024px) {
+  .utilbar .container { gap: 10px; }
+  .utilbar__reg { gap: 12px; overflow: hidden; }
+}
+@media (max-width: 760px) {
+  /* show only the essentials on the dark utility bar */
+  .utilbar__reg span:nth-child(2),
+  .utilbar__reg span:nth-child(3) { display: none; }
+  .utilbar__reg { flex: 1; min-width: 0; }
+  .utilbar__reg span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+@media (max-width: 520px) {
+  .utilbar__reg { display: none; }
+  .utilbar .container { justify-content: flex-end; }
+  .header .container, .header__bar { height: 64px; }
+}
+
+/* section-heading action button full-width on phones */
+@media (max-width: 600px) {
+  .shead .btn, .shead a.btn { width: 100%; justify-content: center; }
+}
+
+/* ============================================================
+   CART — stack item rows on phones
+   ============================================================ */
+@media (max-width: 600px) {
+  .cart-row { flex-wrap: wrap; row-gap: 10px; }
+  .cart-row > img { width: 56px !important; height: 56px !important; }
+  .cart-row > div:first-of-type { flex: 1 1 60%; }
+  .cart-row > .qty { order: 3; }
+  .cart-row > div:nth-of-type(2) { order: 4; margin-left: auto; }
+  .cart-row > .btn { order: 5; }
+}
+
+/* ============================================================
+   OVERFLOW SAFETY — long words, emails, codes never push layout wide
+   ============================================================ */
+@media (max-width: 600px) {
+  p, a, li, td, .lead, .muted, .breadcrumb { overflow-wrap: anywhere; word-break: break-word; }
+  /* receipts / code-like values */
+  .receipt-row b, .footer__regbox { overflow-wrap: anywhere; }
+  /* referral code field shouldn't overflow its row */
+  .field input[readonly] { min-width: 0; }
+}
+
+/* Hero stat overlay text wrapping (when shown on tablets) */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .hero__card { max-width: 200px; }
+}
+
+/* Donate / form steppers: keep step circles inline, comfortable */
+@media (max-width: 480px) {
+  .step__num { width: 30px; height: 30px; font-size: .85rem; }
+  .stepper { gap: 0; }
+}
+
+/* Contact: map + form already stack via .cd-grid; ensure aside cards full width */
+@media (max-width: 768px) {
+  .contact-aside, .cd-grid > aside { width: 100%; }
+}
+
+/* ============================================================
+   GALLERY — show caption overlays on touch devices (no :hover)
+   ============================================================ */
+@media (hover: none), (max-width: 768px) {
+  .masonry__overlay { opacity: 1; background: linear-gradient(to top, rgba(17,24,39,.7), rgba(17,24,39,0) 60%); }
+  .ccard__media img, .pcard__media img, .story-card__media img { transform: none !important; }
+}
+
+/* Video gallery cards: comfortable on phones */
+@media (max-width: 600px) {
+  .vcard__media { aspect-ratio: 16/9; }
+}
