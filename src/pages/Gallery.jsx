@@ -9,10 +9,20 @@ export default function Gallery() {
   const [active, setActive] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { api.getGallery().then((g) => { setImages(g); setLoading(false) }).catch(() => setLoading(false)) }, [])
+  useEffect(() => {
+    api.getGallery()
+      .then((g) => setImages(Array.isArray(g) ? g : []))   // never store a non-array
+      .catch(() => setImages([]))
+      .finally(() => setLoading(false))
+  }, [])
 
-  const cats = ['All', ...new Set(images.map((g) => g.album))]
-  const list = useMemo(() => cat === 'All' ? images : images.filter((g) => g.album === cat), [images, cat])
+  // guard every derived value so a bad payload can't crash the render
+  const safe = Array.isArray(images) ? images : []
+  const cats = ['All', ...new Set(safe.map((g) => g.album).filter(Boolean))]
+  const list = useMemo(
+    () => (cat === 'All' ? safe : safe.filter((g) => g.album === cat)),
+    [safe, cat]
+  )
 
   return (
     <>
@@ -31,7 +41,9 @@ export default function Gallery() {
 
       <section className="section">
         <div className="container">
-          {loading ? <p className="muted">Loading…</p> : images.length === 0 ? (
+          {loading ? (
+            <p className="muted">Loading…</p>
+          ) : safe.length === 0 ? (
             <div className="stub"><div className="stub__icon"><Icon.image width={32} height={32} /></div><h3>No photos yet</h3><p className="muted">The team will add photos from the admin panel.</p></div>
           ) : (
             <>
@@ -40,7 +52,7 @@ export default function Gallery() {
               </div>
               <div className="masonry">
                 {list.map((g, i) => (
-                  <button key={g.id} className={`masonry__item masonry__item--${i % 3 === 0 ? 'tall' : 'short'}`} onClick={() => setActive(g)}>
+                  <button key={g.id || i} className={`masonry__item masonry__item--${i % 3 === 0 ? 'tall' : 'short'}`} onClick={() => setActive(g)}>
                     <img src={imgUrl(g.url)} alt={g.title || g.album} loading="lazy" />
                     <span className="masonry__overlay">
                       <span className="badge badge--saffron">{g.album}</span>

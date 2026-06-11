@@ -14,7 +14,7 @@ export default function Events() {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   useEffect(() => { api.getEvents().then((e) => { setEvents(e || []); setLoading(false) }).catch(() => setLoading(false)) }, [])
-
+   console.log(events)
   return (
     <>
       <header className="page-head">

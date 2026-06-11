@@ -1,3 +1,4 @@
+import { DEMO_PRODUCTS } from '../data/demoProduct.js';
 /**
  * src/lib/api.js — single API client for the SVR backend.
  *
@@ -23,7 +24,6 @@ export function setToken(token) {
 }
 
 /* ---------------- image helper (legacy export) ---------------- */
-import { DEMO_PRODUCTS } from '../data/demoProduct';
 
 export function imgUrl(path) {
   if (!path) return '';
@@ -146,7 +146,7 @@ export const api = {
   getEvents: () => soft(request('/api/events').then((d) => d.events), []),
   getBlogs: (page = 1) => soft(request(`/api/blogs?page=${page}`).then((d) => d.posts), []),
   getBlog: (id) => soft(request(`/api/blogs/${id}`).then((d) => d.post), null),
-  getGallery: (album) => soft(request(`/api/gallery${album ? `?album=${album}` : ''}`), { albums: [], images: [] }),
+  getGallery: (album) => soft(request(`/api/gallery${album ? `?album=${album}` : ''}`).then((d) => d.images || []), []),
   internships: () => soft(request('/api/internships').then((d) => d.internships), []),
   applyInternship: (id, payload) =>
     request(`/api/internships/${id}/apply`, { method: 'POST', body: payload }),
