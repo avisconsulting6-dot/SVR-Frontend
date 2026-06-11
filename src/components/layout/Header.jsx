@@ -29,7 +29,7 @@ const dashboardPath = (user) => (user?.role === 'admin' ? '/admin' : `/dashboard
 function SvrLogo() {
   return (
     <Link to="/" className="svr-logo" aria-label="SVR Educational Society — home">
-      <img src="/svr-logo.png" alt="SVR Educational Society" className="svr-logo__img" />
+      <img src="/svr-logo.jpeg" alt="SVR Educational Society" className="svr-logo__img" />
     </Link>
   )
 }
