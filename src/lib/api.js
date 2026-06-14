@@ -1,4 +1,3 @@
-import { DEMO_PRODUCTS } from '../data/demoProduct';
 /**
  * src/lib/api.js — single API client for the SVR backend.
  *
@@ -133,18 +132,9 @@ export const api = {
   getStats: () => soft(request('/api/stats').then((d) => d.stats), null),
   getCauses: () => soft(request('/api/causes').then((d) => d.causes), []),
   getCause: (slug) => soft(request(`/api/causes/${slug}`).then((d) => d.cause), null),
-  // Shop catalogue — falls back to the frontend demo catalogue while the
-  // shop backend is pending. Real API products take over automatically.
-  getProducts: () =>
-    soft(request('/api/products').then((d) => d.products), [])
-      .then((list) => (list && list.length ? list : DEMO_PRODUCTS)),
-  getProduct: (slug) =>
-    request(`/api/products/${slug}`).then((d) => d.product)
-      .catch(() => {
-        const demo = DEMO_PRODUCTS.find((p) => p.slug === slug)
-        if (!demo) throw new Error('Product not found')
-        return demo
-      }),
+  // Shop catalogue — real products from the admin panel.
+  getProducts: () => soft(request('/api/products').then((d) => d.products), []),
+  getProduct: (slug) => request(`/api/products/${slug}`).then((d) => d.product),
   getEvents: () => soft(request('/api/events').then((d) => d.events), []),
   getBlogs: (page = 1) => soft(request(`/api/blogs?page=${page}`).then((d) => d.posts), []),
   getBlog: (id) => soft(request(`/api/blogs/${id}`).then((d) => d.post), null),
@@ -221,6 +211,10 @@ api.admin = {
   // platform settings (targets, commission, window, reapply, min withdrawal)
   getSettings: () => request('/api/admin/settings').then((d) => d.settings),
   saveSettings: (payload) => request('/api/admin/settings', { method: 'PUT', body: payload }).then((d) => d.settings),
+
+  // orders
+  orders: (params = '') => request(`/api/admin/orders${params}`).then((d) => d.orders),
+  updateOrder: (id, status) => request(`/api/admin/orders/${id}`, { method: 'PATCH', body: { status } }).then((d) => d.order),
 
   // withdrawals
   withdrawals: (params = '') => request(`/api/admin/withdrawals${params}`).then((d) => d.withdrawals),

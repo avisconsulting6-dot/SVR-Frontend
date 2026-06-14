@@ -33,6 +33,7 @@ import AdminDonations from './pages/admin/AdminDonations'
 import AdminUsers from './pages/admin/AdminUsers'
 import AdminSettings from './pages/admin/AdminSettings'
 import AdminWithdrawals from './pages/admin/AdminWithdrawals'
+import AdminOrders from './pages/admin/AdminOrders'
 
 export default function App() {
   return (
@@ -81,13 +82,13 @@ export default function App() {
         <Route path="donations" element={<AdminDonations />} />
         <Route path="settings" element={<AdminSettings />} />
         <Route path="withdrawals" element={<AdminWithdrawals />} />
+         <Route path="orders" element={<AdminOrders />} />
 
+        <Route path="referrals" element={<AdminWithdrawals />} />
         <Route path="users" element={<AdminUsers />} />
         <Route path="volunteers" element={<AdminVolunteers />} />
         <Route path="internships" element={<InternshipModule />} />
         <Route path="interns" element={<Navigate to="/admin/internships" replace />} />
-        <Route path="orders" element={<Navigate to="/admin" replace />} />
-        <Route path="referrals" element={<Navigate to="/admin" replace />} />
       </Route>
     </Routes>
   )

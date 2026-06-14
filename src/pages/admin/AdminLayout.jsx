@@ -17,7 +17,7 @@ const MENU = [
   { to: '/admin/users', label: 'Users & Wallets', icon: 'wallet' },
   { to: '/admin/referrals', label: 'Referrals', icon: 'users' },
   { to: '/admin/settings', label: 'Settings', icon: 'settings' },
-  { to: '/admin/withdrawals', label: 'Withdrawals', icon: 'withdraw' }
+  { to: '/admin/withdrawals', label: 'Withdrawals', icon: 'withdraw' },
 ]
 
 export default function AdminLayout() {
