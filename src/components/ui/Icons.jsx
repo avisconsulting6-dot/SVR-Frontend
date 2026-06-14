@@ -43,4 +43,6 @@ export const Icon = {
   box: (p) => (<svg {...base} {...p}><path d="m12 2 8 4.5v11L12 22l-8-4.5v-11Z"/><path d="m4 6.5 8 4.5 8-4.5M12 11v11"/></svg>),
   image: (p) => (<svg {...base} {...p}><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m4.5 18 5-5 3 3 3.5-3.5 3.5 3.5"/></svg>),
   lock: (p) => (<svg {...base} {...p}><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.2" r="1.3" fill="currentColor" stroke="none"/></svg>),
+  settings: (p) => (<svg {...base} {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0 .33-1.82L4.87 7a2 2 0 1 1-2.83-2.83l-.06-.06A2A2"/></svg>),
+  withdraw: (p) => (<svg {...base} {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>),
 }

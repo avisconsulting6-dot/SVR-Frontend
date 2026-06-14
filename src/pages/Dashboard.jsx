@@ -72,53 +72,42 @@ function StatCard({ icon, label, value, sub, color = 'var(--saffron)' }) {
 }
 
 /* =====================================================================
-   VOLUNTEER — real 3-day target from GET /api/volunteer/dashboard.
-   Rs.5,000 donations target · live countdown · availability toggle ·
+   VOLUNTEER — lifecycle-aware view from GET /api/volunteer/dashboard.
+   applied → in_progress (timer + targets) → active / rejected.
+   Targets/commission/window are admin-configured · availability toggle ·
    referral links · payout shown after rejection · 45-day re-apply.
 ===================================================================== */
 function VolunteerTarget() {
   const [data, setData] = useState(null)
   const [wallet, setWallet] = useState(null)
+  const [withdrawals, setWithdrawals] = useState([])
   const [error, setError] = useState(null)
-  const [copied, setCopied] = useState(null)   // 'donate' | 'shop'
+  const [copied, setCopied] = useState(null)
   const [busy, setBusy] = useState(false)
   const [now, setNow] = useState(Date.now())
+  const [wForm, setWForm] = useState(null)   // withdrawal form state (null = closed)
 
   const load = () => Promise.all([
     api.volunteerDashboard().then(setData),
     api.getWallet().then(setWallet).catch(() => setWallet({ balance: 0, transactions: [] })),
+    api.myWithdrawals().then(setWithdrawals).catch(() => setWithdrawals([])),
   ]).catch((e) => setError(e.message))
   useEffect(() => { load() }, [])
 
-  // live countdown tick (once a minute is enough)
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 60_000)
     return () => clearInterval(id)
   }, [])
 
   if (error) return <p className="muted" style={{ marginBottom: 24 }}>Could not load your volunteer profile: {error}</p>
-  if (!data) return <p className="muted">Loading your target…</p>
+  if (!data) return <p className="muted">Loading your profile…</p>
 
   const { profile, target, commission, reapply } = data
-  const endsAt = new Date(target.endsAt).getTime()
-  const msLeft = Math.max(0, endsAt - now)
-  const d = Math.floor(msLeft / 86_400_000)
-  const h = Math.floor((msLeft % 86_400_000) / 3_600_000)
-  const m = Math.floor((msLeft % 3_600_000) / 60_000)
-  const countdown = msLeft > 0 ? `${d}d ${h}h ${m}m` : 'Window closed'
-
-  const STATUS_TONE = {
-    pending: { badge: 'badge--saffron', label: 'Pending — target in progress' },
-    active: { badge: 'badge--green', label: 'Active volunteer' },
-    rejected: { badge: 'badge', label: 'Not selected' },
-    inactive: { badge: 'badge', label: 'Inactive' },
-  }[profile.status] || { badge: 'badge', label: profile.status }
 
   function copy(kind, link) {
     navigator.clipboard?.writeText(link)
     setCopied(kind); setTimeout(() => setCopied(null), 1800)
   }
-
   async function toggleAvailability() {
     setBusy(true)
     try {
@@ -126,65 +115,128 @@ function VolunteerTarget() {
       await load()
     } finally { setBusy(false) }
   }
-
   async function doReapply() {
-    if (!window.confirm('Start a fresh application with a new 3-day window?')) return
+    if (!window.confirm('Submit a fresh application? It will go to the team for review again.')) return
     setBusy(true)
     try { await api.reapply(); await load() }
     catch (e) { alert(e.message) }
     finally { setBusy(false) }
   }
 
+  /* ---------- STATE 1: APPLIED — awaiting admin review ---------- */
+  if (profile.status === 'applied') {
+    return (
+      <div className="card" style={{ padding: 32, textAlign: 'center', maxWidth: 560, margin: '0 auto' }}>
+        <div style={{ width: 56, height: 56, borderRadius: 99, background: 'var(--saffron-50)', color: 'var(--saffron-700)', display: 'grid', placeItems: 'center', margin: '0 auto 16px' }}>
+          <Icon.clock width={28} height={28} />
+        </div>
+        <h3 style={{ marginBottom: 8 }}>Application under review</h3>
+        <p className="muted" style={{ maxWidth: '42ch', margin: '0 auto 16px' }}>
+          Thanks for signing up! Our team will verify your application shortly. Once it's approved,
+          your activation challenge begins and you'll get an email with your referral links.
+        </p>
+        <span className="badge badge--saffron">Awaiting approval</span>
+        <p className="muted" style={{ fontSize: '.82rem', marginTop: 16 }}>
+          Application ID: <b style={{ letterSpacing: '.06em' }}>{profile.applicationId}</b>
+        </p>
+      </div>
+    )
+  }
+
+  /* ---------- STATE 4: REJECTED — window passed, target missed ---------- */
+  if (profile.status === 'rejected') {
+    return (
+      <div className="card" style={{ padding: 32, textAlign: 'center', maxWidth: 560, margin: '0 auto' }}>
+        <div style={{ width: 56, height: 56, borderRadius: 99, background: 'var(--paper-2)', color: 'var(--muted)', display: 'grid', placeItems: 'center', margin: '0 auto 16px' }}>
+          <Icon.clock width={28} height={28} />
+        </div>
+        <h3 style={{ marginBottom: 8 }}>Activation window closed</h3>
+        <p className="muted" style={{ maxWidth: '44ch', margin: '0 auto 14px' }}>
+          The target wasn't reached within the window this time.
+          {commission?.earned > 0 && <> The <b>{formatINR(commission.earned)}</b> you earned stays in your wallet.</>}
+        </p>
+        {reapply?.canReapply ? (
+          <button className="btn btn--primary btn--sm" disabled={busy} onClick={doReapply}>Re-apply now</button>
+        ) : reapply?.availableAt ? (
+          <span className="badge badge--blue">Re-apply available from {formatDate(reapply.availableAt)}</span>
+        ) : null}
+        {wallet?.balance > 0 && <WithdrawBlock wallet={wallet} withdrawals={withdrawals} wForm={wForm} setWForm={setWForm} reload={load} />}
+      </div>
+    )
+  }
+
+  /* ---------- STATES 2 & 3: IN_PROGRESS / ACTIVE — full dashboard ---------- */
+  const hasWindow = !!target
+  const endsAt = hasWindow && target.endsAt ? new Date(target.endsAt).getTime() : null
+  const msLeft = endsAt ? Math.max(0, endsAt - now) : 0
+  const d = Math.floor(msLeft / 86_400_000)
+  const h = Math.floor((msLeft % 86_400_000) / 3_600_000)
+  const m = Math.floor((msLeft % 3_600_000) / 60_000)
+  const countdown = msLeft > 0 ? `${d}d ${h}h ${m}m` : 'Window closed'
+  const isActive = profile.status === 'active'
+
+  const STATUS_TONE = isActive
+    ? { badge: 'badge--green', label: 'Active volunteer' }
+    : { badge: 'badge--saffron', label: 'Challenge in progress' }
+
+  const dn = target?.donations
+  const pct = dn?.percent ?? 0
+
   return (
     <>
-      {/* stat strip */}
       <div className="grid grid-4" style={{ marginBottom: 24 }}>
-        <StatCard icon="rupee" label="Donations referred" value={formatINR(target.donations.referred)}
-          color="var(--green)" sub={`of ${formatINR(target.donations.required)} target`} />
-        <StatCard icon="target" label="Remaining to target" value={formatINR(target.donations.remaining)}
-          color="var(--saffron)" sub={target.donations.remaining === 0 ? 'Target reached!' : undefined} />
-        <StatCard icon="clock" label="Time remaining" value={countdown} color="var(--blue)"
-          sub={profile.status === 'pending' ? `Ends ${formatDate(target.endsAt)}` : undefined} />
+        <StatCard icon="rupee" label="Donations referred" value={formatINR(dn?.referred ?? 0)}
+          color="var(--green)" sub={`of ${formatINR(dn?.required ?? 0)} target`} />
+        <StatCard icon="target" label="Remaining to target" value={formatINR(dn?.remaining ?? 0)}
+          color="var(--saffron)" sub={dn?.remaining === 0 ? 'Target reached!' : undefined} />
+        <StatCard icon="clock" label="Time remaining" value={isActive ? '—' : countdown} color="var(--blue)"
+          sub={!isActive && hasWindow ? `Ends ${formatDate(target.endsAt)}` : isActive ? 'Activated' : undefined} />
         <StatCard icon="wallet" label="Wallet balance" value={formatINR(wallet?.balance ?? 0)} color="#a855f7"
-          sub={commission.earned > 0 ? `${formatINR(commission.earned)} commission earned` : undefined} />
+          sub={commission?.earned > 0 ? `${formatINR(commission.earned)} earned` : undefined} />
       </div>
 
-      {/* target card */}
       <div className="card" style={{ padding: 0, marginBottom: 24 }}>
         <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Icon.target width={19} height={19} style={{ color: 'var(--saffron)' }} />
-            <h4>My 3-day target</h4>
+            <h4>My activation target</h4>
             <span className={`badge ${STATUS_TONE.badge}`}>{STATUS_TONE.label}</span>
           </div>
-          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.05rem', color: 'var(--green-700)' }}>
-            {target.donations.percent}%
-          </span>
+          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.05rem', color: 'var(--green-700)' }}>{pct}%</span>
         </div>
-
         <div style={{ padding: 22 }}>
           <p className="muted" style={{ fontSize: '.9rem', marginBottom: 12 }}>
-            Collect <b>{formatINR(target.donations.required)}</b> in donations through your link within 3 days.
-            Every donation counts, whatever the amount — and <b>{commission.percent}% of every donation</b> is
-            credited to your wallet immediately.
+            {isActive
+              ? <>You hit your target — you're an active SVR volunteer. Keep sharing your links to keep earning <b>{commission.percent}%</b> on every donation.</>
+              : <>Raise <b>{formatINR(dn?.required ?? 0)}</b> in donations through your link before the window closes.
+                  Every donation counts, and <b>{commission.percent}%</b> is credited to your wallet instantly.</>}
           </p>
-          <div style={{ height: 10, background: 'var(--paper-2)', borderRadius: 99, overflow: 'hidden' }}
-            role="progressbar" aria-valuenow={target.donations.percent} aria-valuemin={0} aria-valuemax={100} aria-label="Donation target progress">
-            <div style={{ width: `${target.donations.percent}%`, height: '100%', borderRadius: 99, background: target.donations.percent >= 100 ? 'var(--green)' : 'var(--saffron)', transition: 'width .6s cubic-bezier(.22,1,.36,1)' }} />
+          <div style={{ height: 10, background: 'var(--paper-2)', borderRadius: 99, overflow: 'hidden' }} role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+            <div style={{ width: `${pct}%`, height: '100%', borderRadius: 99, background: pct >= 100 ? 'var(--green)' : 'var(--saffron)', transition: 'width .6s cubic-bezier(.22,1,.36,1)' }} />
           </div>
           <div className="muted" style={{ fontSize: '.8rem', marginTop: 8 }}>
-            {formatINR(target.donations.referred)} raised · {formatINR(target.donations.remaining)} to go
+            {formatINR(dn?.referred ?? 0)} raised · {formatINR(dn?.remaining ?? 0)} to go
           </div>
+          {/* product target, only if admin enabled it */}
+          {target?.products?.required > 0 && (
+            <div style={{ marginTop: 18 }}>
+              <div className="muted" style={{ fontSize: '.85rem', marginBottom: 6 }}>Shop sales target ({target.rule === 'both' ? 'both required' : 'either counts'})</div>
+              <div style={{ height: 10, background: 'var(--paper-2)', borderRadius: 99, overflow: 'hidden' }}>
+                <div style={{ width: `${target.products.percent}%`, height: '100%', borderRadius: 99, background: 'var(--blue)' }} />
+              </div>
+              <div className="muted" style={{ fontSize: '.8rem', marginTop: 8 }}>
+                {formatINR(target.products.referred)} of {formatINR(target.products.required)}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       <div className="grid grid-2" style={{ marginBottom: 24 }}>
-        {/* referral links */}
         <div className="card" style={{ padding: 24 }}>
           <h4 style={{ marginBottom: 6 }}>Your referral links</h4>
           <p className="muted" style={{ fontSize: '.9rem', marginBottom: 14 }}>
-            Application ID <b style={{ fontFamily: 'var(--font-display)', letterSpacing: '.06em' }}>{profile.applicationId}</b>.
-            Donations made through these links count toward your target.
+            Application ID <b style={{ letterSpacing: '.06em' }}>{profile.applicationId}</b>. Donations and orders through these links count toward your target.
           </p>
           <div className="field"><label>Donation link</label>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -200,13 +252,10 @@ function VolunteerTarget() {
           </div>
         </div>
 
-        {/* availability + outcome */}
         <div className="card" style={{ padding: 24 }}>
           <h4 style={{ marginBottom: 6 }}>My availability</h4>
-          <p className="muted" style={{ fontSize: '.9rem', marginBottom: 14 }}>
-            Let the SVR team know whether you're currently available for activities. This is visible to the admin.
-          </p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+          <p className="muted" style={{ fontSize: '.9rem', marginBottom: 14 }}>Let the SVR team know if you're available for activities.</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <span className={`badge ${profile.availability === 'available' ? 'badge--green' : ''}`}>
               {profile.availability === 'available' ? 'Available' : 'Unavailable'}
             </span>
@@ -214,52 +263,121 @@ function VolunteerTarget() {
               {busy ? '…' : profile.availability === 'available' ? 'Set unavailable' : 'Set available'}
             </button>
           </div>
-
-          {profile.status === 'rejected' && reapply && (
-            <div style={{ borderTop: '1px solid var(--line)', paddingTop: 16 }}>
-              <h4 style={{ fontSize: '1rem', marginBottom: 6 }}>Application outcome</h4>
-              <p className="muted" style={{ fontSize: '.88rem', marginBottom: 10 }}>
-                The 3-day target was not reached.
-                {commission.earned > 0 && <> The <b>{formatINR(commission.earned)}</b> commission you earned stays in your wallet.</>}
-                {' '}You can re-apply 45 days after rejection.
-              </p>
-              {reapply.canReapply ? (
-                <button className="btn btn--primary btn--sm" disabled={busy} onClick={doReapply}>Re-apply now</button>
-              ) : (
-                <span className="badge badge--blue">Re-apply available from {formatDate(reapply.availableAt)}</span>
-              )}
-            </div>
-          )}
-
-          {profile.status === 'active' && (
-            <div style={{ borderTop: '1px solid var(--line)', paddingTop: 16 }}>
-              <span className="badge badge--green"><Icon.checkCircle width={13} height={13} /> Target met — you're an active SVR volunteer</span>
+          {isActive && (
+            <div style={{ borderTop: '1px solid var(--line)', paddingTop: 16, marginTop: 16 }}>
+              <span className="badge badge--green"><Icon.checkCircle width={13} height={13} /> Active SVR volunteer</span>
             </div>
           )}
         </div>
       </div>
 
-      {/* wallet activity — real money (₹), e.g. the 20% payout */}
+      {/* withdrawal */}
+      <WithdrawBlock wallet={wallet} withdrawals={withdrawals} wForm={wForm} setWForm={setWForm} reload={load} />
+
+      {/* wallet activity */}
       <div className="card" style={{ padding: 0, marginBottom: 24 }}>
         <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--line)' }}><h4>Wallet activity</h4></div>
         <div style={{ maxHeight: 240, overflowY: 'auto' }}>
-          {wallet?.transactions?.length ? wallet.transactions.map((t) => (
-            <div key={t.id} className="donor-row" style={{ padding: '12px 22px' }}>
-              <div className="donor-row__av" style={{ background: t.type === 'credit' ? 'var(--green-50)' : 'var(--saffron-50)', color: t.type === 'credit' ? 'var(--green-700)' : 'var(--saffron-700)' }}>
-                {t.type === 'credit' ? '+' : '−'}
-              </div>
+          {wallet?.transactions?.length ? wallet.transactions.map((t, i) => (
+            <div key={i} className="donor-row" style={{ padding: '12px 22px' }}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, color: 'var(--ink)', fontSize: '.9rem' }}>{t.description || t.reason}</div>
-                <div className="muted" style={{ fontSize: '.78rem' }}>{formatDate(t.createdAt)}</div>
+                <div style={{ fontWeight: 600, color: 'var(--ink)', fontSize: '.9rem' }}>{t.description}</div>
+                <div className="muted" style={{ fontSize: '.78rem' }}>{formatDate(t.date)}</div>
               </div>
-              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: t.type === 'credit' ? 'var(--green-700)' : 'var(--ink)' }}>
-                {t.type === 'credit' ? '+' : '−'}{formatINR(t.amount)}
+              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: t.amount >= 0 ? 'var(--green-700)' : 'var(--ink)' }}>
+                {t.amount >= 0 ? '+' : '−'}{formatINR(Math.abs(t.amount))}
               </div>
             </div>
-          )) : <p className="muted" style={{ padding: 22, fontSize: '.9rem' }}>No wallet activity yet. You earn 10% of every donation referred through your link.</p>}
+          )) : <p className="muted" style={{ padding: 22, fontSize: '.9rem' }}>No wallet activity yet. You earn {commission?.percent ?? 10}% of every donation referred.</p>}
         </div>
       </div>
     </>
+  )
+}
+
+/* Withdrawal request + history block, shared by active and rejected views. */
+function WithdrawBlock({ wallet, withdrawals, wForm, setWForm, reload }) {
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const balance = wallet?.balance ?? 0
+
+  function open() { setErr(''); setWForm({ amount: '', method: 'upi', upiId: '', accountName: '', accountNumber: '', ifsc: '' }) }
+  const set = (k, v) => setWForm((f) => ({ ...f, [k]: v }))
+
+  async function submit(e) {
+    e.preventDefault()
+    setBusy(true); setErr('')
+    try {
+      await api.requestWithdrawal({
+        amount: Number(wForm.amount),
+        method: wForm.method,
+        ...(wForm.method === 'upi'
+          ? { upiId: wForm.upiId }
+          : { accountName: wForm.accountName, accountNumber: wForm.accountNumber, ifsc: wForm.ifsc }),
+      })
+      setWForm(null)
+      await reload()
+    } catch (e2) { setErr(e2.message) }
+    finally { setBusy(false) }
+  }
+
+  const badge = { pending: 'badge--saffron', paid: 'badge--green', rejected: 'badge' }
+
+  return (
+    <div className="card" style={{ padding: 24, marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
+        <div>
+          <h4>Withdraw earnings</h4>
+          <p className="muted" style={{ fontSize: '.88rem', marginTop: 4 }}>Available balance: <b>{formatINR(balance)}</b></p>
+        </div>
+        {!wForm && <button className="btn btn--primary btn--sm" disabled={balance <= 0} onClick={open}>Request withdrawal</button>}
+      </div>
+
+      {wForm && (
+        <form onSubmit={submit} style={{ borderTop: '1px solid var(--line)', paddingTop: 16 }}>
+          <div className="row-2">
+            <div className="field"><label>Amount (₹)</label>
+              <input className="input" type="number" min="1" max={balance} value={wForm.amount} onChange={(e) => set('amount', e.target.value)} /></div>
+            <div className="field"><label>Method</label>
+              <select className="select" value={wForm.method} onChange={(e) => set('method', e.target.value)}>
+                <option value="upi">UPI</option>
+                <option value="bank">Bank account</option>
+              </select></div>
+          </div>
+          {wForm.method === 'upi' ? (
+            <div className="field"><label>UPI ID</label>
+              <input className="input" value={wForm.upiId} onChange={(e) => set('upiId', e.target.value)} placeholder="name@bank" /></div>
+          ) : (
+            <>
+              <div className="field"><label>Account holder name</label>
+                <input className="input" value={wForm.accountName} onChange={(e) => set('accountName', e.target.value)} /></div>
+              <div className="row-2">
+                <div className="field"><label>Account number</label>
+                  <input className="input" value={wForm.accountNumber} onChange={(e) => set('accountNumber', e.target.value)} /></div>
+                <div className="field"><label>IFSC</label>
+                  <input className="input" value={wForm.ifsc} onChange={(e) => set('ifsc', e.target.value.toUpperCase())} /></div>
+              </div>
+            </>
+          )}
+          {err && <div className="field__err" style={{ marginBottom: 10 }}>{err}</div>}
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button className="btn btn--primary btn--sm" disabled={busy}>{busy ? 'Submitting…' : 'Submit request'}</button>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={() => setWForm(null)}>Cancel</button>
+          </div>
+        </form>
+      )}
+
+      {withdrawals?.length > 0 && (
+        <div style={{ marginTop: 16, borderTop: '1px solid var(--line)', paddingTop: 12 }}>
+          {withdrawals.map((w) => (
+            <div key={w.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', fontSize: '.88rem' }}>
+              <span>{formatINR(w.amount)} · {w.method.toUpperCase()} · <span className="muted">{formatDate(w.requestedAt)}</span></span>
+              <span className={`badge ${badge[w.status] || 'badge'}`}>{w.status}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -373,7 +491,7 @@ function txnLabel(reason) {
   return {
     referral_earned: 'Referral reward (your invite donated)',
     referral_bonus: 'Welcome bonus (first donation)',
-    commission: 'Volunteer payout (3-day window)',
+    commission: 'Volunteer commission',
     redeem_shop: 'Redeemed at shop',
     redeem_donation: 'Redeemed on donation',
     admin_adjust: 'Adjustment by SVR',

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { api, imgUrl } from '../lib/api'
+import { Link, useSearchParams } from 'react-router-dom'
+import { imgUrl } from '../lib/api'
+import { payForOrder } from '../lib/razorpay'
 import { Icon } from '../components/ui/Icons'
 import { formatINR } from '../lib/format'
 import { useCart } from '../context/CartContext'
@@ -8,36 +9,52 @@ import { useAuth } from '../context/AuthContext'
 
 export default function Cart() {
   const { items, setQty, remove, clear, subtotal, count } = useCart()
-  const { user, refresh } = useAuth()
-  const [walletBalance, setWalletBalance] = useState(0)
-  const [useCoins, setUseCoins] = useState(0)
-  const [customer, setCustomer] = useState({ name: '', email: '', phone: '', address: '' })
+  const { user } = useAuth()
+  const [params] = useSearchParams()
+  const refFromUrl = params.get('ref') || sessionStorage.getItem('svr_shop_ref') || ''
+
+  const [customer, setCustomer] = useState({ name: '', email: '', phone: '' })
+  const [address, setAddress] = useState({ line1: '', line2: '', city: '', state: '', pincode: '' })
   const [placing, setPlacing] = useState(false)
   const [order, setOrder] = useState(null)
   const [error, setError] = useState('')
 
+  // persist a referral arriving on the shop link so it survives navigation
   useEffect(() => {
-    if (user) {
-      api.getWallet().then((w) => setWalletBalance(w.balance)).catch(() => {})
-      setCustomer((c) => ({ ...c, name: c.name || user.name, email: c.email || user.email }))
-    }
+    const r = params.get('ref')
+    if (r) sessionStorage.setItem('svr_shop_ref', r)
+  }, [params])
+
+  useEffect(() => {
+    if (user) setCustomer((c) => ({ ...c, name: c.name || user.name, email: c.email || user.email }))
   }, [user])
 
-  const maxCoins = Math.min(walletBalance, subtotal)
-  const coins = Math.min(useCoins, maxCoins)
-  const total = Math.max(0, subtotal - coins)
+  const setC = (k, v) => setCustomer((c) => ({ ...c, [k]: v }))
+  const setA = (k, v) => setAddress((a) => ({ ...a, [k]: v }))
+
+  const valid =
+    customer.name.trim() &&
+    /^\S+@\S+\.\S+$/.test(customer.email) &&
+    address.line1.trim() && address.city.trim() && address.state.trim() &&
+    /^\d{6}$/.test(address.pincode)
 
   async function placeOrder() {
     setError(''); setPlacing(true)
     try {
-      const res = await api.checkout({
+      const placed = await payForOrder({
         items: items.map((i) => ({ productId: i.id, qty: i.qty })),
-        customer, coinsUsed: coins,
+        customer,
+        address,
+        ...(refFromUrl ? { ref: refFromUrl } : {}),
       })
-      setOrder(res.order)
-      if (user) await refresh()
+      setOrder(placed)
+      sessionStorage.removeItem('svr_shop_ref')
       clear()
-    } catch (e) { setError(e.message) } finally { setPlacing(false) }
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setPlacing(false)
+    }
   }
 
   if (order) {
@@ -47,16 +64,15 @@ export default function Cart() {
           <div className="tick"><Icon.checkCircle width={48} height={48} /></div>
           <h2>Order confirmed!</h2>
           <p className="muted" style={{ margin: '8px auto 0', maxWidth: '46ch' }}>
-            Thank you, {order.customerName.split(' ')[0]}. Your order <b style={{ color: 'var(--ink)' }}>#{order.id.slice(-8).toUpperCase()}</b> is confirmed.
+            Thank you, {order.customerName.split(' ')[0]}. Your order <b style={{ color: 'var(--ink)' }}>{order.orderNo}</b> is confirmed.
+            A confirmation has been emailed to {order.customerEmail}.
           </p>
           <div className="receipt">
-            <div className="receipt-row"><span>Subtotal</span><b>{formatINR(order.subtotal)}</b></div>
-            {order.coinsUsed > 0 && <div className="receipt-row"><span>Coins redeemed</span><b style={{ color: 'var(--green-700)' }}>−{formatINR(order.coinsUsed)}</b></div>}
+            <div className="receipt-row"><span>Items</span><b>{order.items.reduce((n, i) => n + i.qty, 0)}</b></div>
             <div className="receipt-row"><span>Total paid</span><b>{formatINR(order.total)}</b></div>
           </div>
           <div className="hero__cta" style={{ justifyContent: 'center', marginTop: 24 }}>
-            <Link to="/store" className="btn btn--ghost">Continue shopping</Link>
-            {user && <Link to="/dashboard/donor" className="btn btn--primary">View dashboard</Link>}
+            <Link to="/store" className="btn btn--primary">Continue shopping</Link>
           </div>
         </div>
       </div></section>
@@ -101,18 +117,30 @@ export default function Cart() {
             ))}
 
             <div className="card" style={{ padding: 22, marginTop: 8 }}>
-              <h4 style={{ marginBottom: 14 }}>Delivery details</h4>
+              <h4 style={{ marginBottom: 14 }}>Contact details</h4>
               <div className="row-2">
                 <div className="field"><label>Name <span className="req">*</span></label>
-                  <input className="input" value={customer.name} onChange={(e) => setCustomer({ ...customer, name: e.target.value })} /></div>
+                  <input className="input" value={customer.name} onChange={(e) => setC('name', e.target.value)} /></div>
                 <div className="field"><label>Email <span className="req">*</span></label>
-                  <input className="input" type="email" value={customer.email} onChange={(e) => setCustomer({ ...customer, email: e.target.value })} /></div>
+                  <input className="input" type="email" value={customer.email} onChange={(e) => setC('email', e.target.value)} /></div>
               </div>
+              <div className="field"><label>Phone</label>
+                <input className="input" value={customer.phone} onChange={(e) => setC('phone', e.target.value)} placeholder="10-digit number" /></div>
+
+              <h4 style={{ margin: '18px 0 14px' }}>Delivery address</h4>
+              <div className="field"><label>Address line 1 <span className="req">*</span></label>
+                <input className="input" value={address.line1} onChange={(e) => setA('line1', e.target.value)} placeholder="House no., street" /></div>
+              <div className="field"><label>Address line 2</label>
+                <input className="input" value={address.line2} onChange={(e) => setA('line2', e.target.value)} placeholder="Area, landmark (optional)" /></div>
               <div className="row-2">
-                <div className="field"><label>Phone</label>
-                  <input className="input" value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value })} /></div>
-                <div className="field"><label>Address</label>
-                  <input className="input" value={customer.address} onChange={(e) => setCustomer({ ...customer, address: e.target.value })} /></div>
+                <div className="field"><label>City <span className="req">*</span></label>
+                  <input className="input" value={address.city} onChange={(e) => setA('city', e.target.value)} /></div>
+                <div className="field"><label>State <span className="req">*</span></label>
+                  <input className="input" value={address.state} onChange={(e) => setA('state', e.target.value)} /></div>
+              </div>
+              <div className="field" style={{ maxWidth: 200 }}><label>Pincode <span className="req">*</span></label>
+                <input className="input" value={address.pincode} onChange={(e) => setA('pincode', e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="6 digits" />
+                {address.pincode && !/^\d{6}$/.test(address.pincode) && <span className="field__err">Enter a valid 6-digit pincode</span>}
               </div>
             </div>
           </div>
@@ -120,32 +148,21 @@ export default function Cart() {
           <aside>
             <div className="cd-aside">
               <h4 style={{ marginBottom: 14 }}>Order summary</h4>
-              <div className="receipt-row"><span>Subtotal ({count} items)</span><b>{formatINR(subtotal)}</b></div>
-
-              {user ? (
-                walletBalance > 0 ? (
-                  <div className="note note--green" style={{ margin: '14px 0', flexDirection: 'column', alignItems: 'stretch', gap: 10 }}>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}><Icon.wallet width={18} height={18} /><span>Redeem coins (you have <b>{walletBalance}</b>)</span></div>
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                      <input type="range" min="0" max={maxCoins} value={coins} onChange={(e) => setUseCoins(Number(e.target.value))} style={{ flex: 1 }} />
-                      <b style={{ minWidth: 80, textAlign: 'right' }}>−{formatINR(coins)}</b>
-                    </div>
-                  </div>
-                ) : <div className="muted" style={{ fontSize: '.84rem', margin: '10px 0' }}>Earn coins by referring friends — redeem them here next time.</div>
-              ) : (
-                <div className="note" style={{ margin: '14px 0' }}><Icon.bell width={18} height={18} /><span><Link to="/login">Log in</Link> to pay with reward coins.</span></div>
+              <div className="receipt-row"><span>Subtotal ({count} item{count !== 1 ? 's' : ''})</span><b>{formatINR(subtotal)}</b></div>
+              {refFromUrl && (
+                <div className="note note--green" style={{ margin: '12px 0', fontSize: '.84rem' }}>
+                  <Icon.checkCircle width={16} height={16} /> Supporting volunteer <b>{refFromUrl}</b>
+                </div>
               )}
-
               <hr className="divider" style={{ margin: '10px 0' }} />
-              <div className="receipt-row" style={{ fontSize: '1.15rem' }}><span><b>Total</b></span><b style={{ color: 'var(--saffron-700)' }}>{formatINR(total)}</b></div>
+              <div className="receipt-row" style={{ fontSize: '1.15rem' }}><span><b>Total</b></span><b style={{ color: 'var(--saffron-700)' }}>{formatINR(subtotal)}</b></div>
 
               {error && <div className="field__err" style={{ marginTop: 10 }}>{error}</div>}
               <button className="btn btn--primary btn--block btn--lg" style={{ marginTop: 16 }}
-                disabled={placing || !customer.name || !/^\S+@\S+\.\S+$/.test(customer.email)}
-                onClick={placeOrder}>
-                {placing ? 'Placing order…' : <>Place order <Icon.arrowRight width={17} height={17} /></>}
+                disabled={placing || !valid} onClick={placeOrder}>
+                {placing ? 'Opening payment…' : <>Pay {formatINR(subtotal)} <Icon.arrowRight width={17} height={17} /></>}
               </button>
-              <div className="seal" style={{ justifyContent: 'center', marginTop: 14 }}><Icon.shield width={16} height={16} /> Secure checkout</div>
+              <div className="seal" style={{ justifyContent: 'center', marginTop: 14 }}><Icon.shield width={16} height={16} /> Secure online payment via Razorpay</div>
             </div>
           </aside>
         </div>

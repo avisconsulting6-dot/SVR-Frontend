@@ -1,4 +1,4 @@
-import { DEMO_PRODUCTS } from '../data/demoProduct.js';
+import { DEMO_PRODUCTS } from '../data/demoProduct';
 /**
  * src/lib/api.js — single API client for the SVR backend.
  *
@@ -118,6 +118,8 @@ export const api = {
   setAvailability: (availability) =>
     request('/api/volunteer/availability', { method: 'PATCH', body: { availability } }),
   reapply: () => request('/api/volunteer/reapply', { method: 'POST' }),
+  requestWithdrawal: (payload) => request('/api/wallet/withdraw', { method: 'POST', body: payload }),
+  myWithdrawals: () => request('/api/wallet/withdrawals').then((d) => d.withdrawals),
 
   /* ---------------- intern ---------------- */
   internDashboard: () => request('/api/intern/dashboard'),
@@ -213,6 +215,17 @@ api.admin = {
   volunteerDetail: (id) => request(`/api/admin/volunteers/${id}`),
   setVolunteerStatus: (id, status) =>
     request(`/api/admin/volunteers/${id}`, { method: 'PATCH', body: { status } }),
+  acceptVolunteer: (id) =>
+    request(`/api/admin/volunteers/${id}/accept`, { method: 'POST' }),
+
+  // platform settings (targets, commission, window, reapply, min withdrawal)
+  getSettings: () => request('/api/admin/settings').then((d) => d.settings),
+  saveSettings: (payload) => request('/api/admin/settings', { method: 'PUT', body: payload }).then((d) => d.settings),
+
+  // withdrawals
+  withdrawals: (params = '') => request(`/api/admin/withdrawals${params}`).then((d) => d.withdrawals),
+  processWithdrawal: (id, status, adminNote = '') =>
+    request(`/api/admin/withdrawals/${id}`, { method: 'PATCH', body: { status, adminNote } }).then((d) => d.withdrawal),
 
   internships: () => request('/api/admin/internships').then((d) => d.internships),
   internApplications: (params = '') => request(`/api/admin/intern-applications${params}`).then((d) => d.applications),

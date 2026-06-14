@@ -78,3 +78,39 @@ export async function payAndDonate(donor) {
 export function donateDirect(donor) {
   return api.donate(donor)
 }
+
+/**
+ * Shop order checkout: create order -> open Razorpay -> verify -> order recorded.
+ * payload: { items:[{productId, qty}], customer:{name,email,phone}, address:{...}, ref? }
+ * Returns the recorded order on success; throws on failure/cancel.
+ */
+export async function payForOrder(payload) {
+  await loadRazorpayScript()
+
+  const order = await post('/api/orders/create-order', payload)
+
+  const payment = await new Promise((resolve, reject) => {
+    const rzp = new window.Razorpay({
+      key: order.keyId,
+      amount: order.amount,
+      currency: order.currency,
+      order_id: order.orderId,
+      name: 'SVR Educational Society',
+      description: 'Shop order',
+      prefill: {
+        name: payload.customer.name,
+        email: payload.customer.email,
+        contact: payload.customer.phone,
+      },
+      theme: { color: '#16a34a' },
+      handler: resolve,
+      modal: { ondismiss: () => reject(new Error('Payment cancelled.')) },
+    })
+    rzp.on('payment.failed', (resp) =>
+      reject(new Error(resp?.error?.description || 'Payment failed. You were not charged.')))
+    rzp.open()
+  })
+
+  const result = await post('/api/orders/verify', { ...payload, ...payment })
+  return result.order
+}

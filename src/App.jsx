@@ -31,6 +31,8 @@ import InternshipModule from './pages/admin/InternshipModule'
 import AdminVolunteers from './pages/admin/AdminVolunteers'
 import AdminDonations from './pages/admin/AdminDonations'
 import AdminUsers from './pages/admin/AdminUsers'
+import AdminSettings from './pages/admin/AdminSettings'
+import AdminWithdrawals from './pages/admin/AdminWithdrawals'
 
 export default function App() {
   return (
@@ -77,6 +79,9 @@ export default function App() {
         <Route path="events" element={<ResourceManager resource="events" title="Fundraising events" icon="bell" config={RESOURCE_CONFIG.events} />} />
         <Route path="gallery" element={<ResourceManager resource="gallery" title="Gallery" icon="grid" config={RESOURCE_CONFIG.gallery} />} />
         <Route path="donations" element={<AdminDonations />} />
+        <Route path="settings" element={<AdminSettings />} />
+        <Route path="withdrawals" element={<AdminWithdrawals />} />
+
         <Route path="users" element={<AdminUsers />} />
         <Route path="volunteers" element={<AdminVolunteers />} />
         <Route path="internships" element={<InternshipModule />} />
