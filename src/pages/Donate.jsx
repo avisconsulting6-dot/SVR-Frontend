@@ -28,7 +28,7 @@ export default function Donate() {
   const [causeId, setCauseId] = useState(urlCauseId)   // '' = "Where most needed"
   const [amount, setAmount] = useState(1000)
   const [custom, setCustom] = useState('')
-  const [donor, setDonor] = useState({ name: '', email: '', phone: '', pan: '', anon: false })
+  const [donor, setDonor] = useState({ name: '', email: '', phone: '', pan: '', anon: false, want80G: false })
   const [processing, setProcessing] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
@@ -48,12 +48,15 @@ export default function Donate() {
   const causeTitle = event ? `Event: ${event.title}` : causeObj ? causeObj.title : 'Where most needed'
 
   const canNext = () => {
-    if (step === 1) return finalAmount >= 100
+    if (step === 1) return finalAmount > 0
     if (step === 2) {
-      return donor.name.trim().length >= 2 &&
+      const base = donor.name.trim().length >= 2 &&
         /^\S+@\S+\.\S+$/.test(donor.email) &&
-        /^[6-9]\d{9}$/.test(donor.phone) &&
-        PAN_RE.test(donor.pan)
+        /^[6-9]\d{9}$/.test(donor.phone)
+      // PAN only required when the donor wants an 80G receipt
+      if (donor.want80G) return base && PAN_RE.test(donor.pan)
+      // if they typed a PAN without wanting 80G, it must still be valid (or blank)
+      return base && (!donor.pan || PAN_RE.test(donor.pan))
     }
     return true
   }
@@ -65,7 +68,8 @@ export default function Donate() {
       name: donor.name.trim(),
       email: donor.email.trim().toLowerCase(),
       phone: donor.phone.trim(),
-      pan: donor.pan.toUpperCase().trim(),
+      want80G: donor.want80G,
+      ...(donor.pan.trim() ? { pan: donor.pan.toUpperCase().trim() } : {}),
       ...(eventId ? { eventId } : causeId ? { causeId } : {}),
       ...(ref ? { ref } : {}),
     }
@@ -155,9 +159,8 @@ export default function Donate() {
                 <label>Or enter a custom amount</label>
                 <div style={{ position: 'relative' }}>
                   <span style={{ position: 'absolute', left: 14, top: 12, color: 'var(--muted)' }}>₹</span>
-                  <input className="input" style={{ paddingLeft: 28 }} type="number" min="100" placeholder="Custom amount" value={custom} onChange={(e) => setCustom(e.target.value)} />
+                  <input className="input" style={{ paddingLeft: 28 }} type="number" min="1" placeholder="Custom amount" value={custom} onChange={(e) => setCustom(e.target.value)} />
                 </div>
-                {finalAmount < 100 && <span className="field__err">Minimum donation is ₹100</span>}
               </div>
             </div>
           )}
@@ -165,7 +168,7 @@ export default function Donate() {
           {step === 2 && (
             <div>
               <h3 style={{ marginBottom: 6 }}>Your details</h3>
-              <p className="muted" style={{ marginBottom: 20 }}>Required for your 80G tax receipt.</p>
+              <p className="muted" style={{ marginBottom: 20 }}>Your details for the donation. PAN is only needed if you want an 80G tax receipt.</p>
               <div className="field"><label>Full name <span className="req">*</span></label>
                 <input className="input" value={donor.name} onChange={(e) => setDonor({ ...donor, name: e.target.value })} placeholder="As per PAN" /></div>
               <div className="row-2">
@@ -175,9 +178,15 @@ export default function Donate() {
                   <input className="input" value={donor.phone} onChange={(e) => setDonor({ ...donor, phone: e.target.value })} placeholder="10-digit number" />
                   {donor.phone && !/^[6-9]\d{9}$/.test(donor.phone) && <span className="field__err">Enter a valid 10-digit mobile number</span>}</div>
               </div>
-              <div className="field"><label>PAN <span className="req">*</span></label>
-                <input className="input" value={donor.pan} onChange={(e) => setDonor({ ...donor, pan: e.target.value.toUpperCase() })} placeholder="ABCDE1234F" maxLength={10} />
-                {donor.pan && !PAN_RE.test(donor.pan) && <span className="field__err">Enter a valid PAN (e.g. ABCDE1234F) — required for the 80G receipt</span>}</div>
+              <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: '.92rem', margin: '4px 0 14px' }}>
+                <input type="checkbox" checked={donor.want80G} onChange={(e) => setDonor({ ...donor, want80G: e.target.checked })} style={{ marginTop: 3 }} />
+                <span>I want an <b>80G tax-exemption receipt</b> (requires your PAN)</span>
+              </label>
+              {donor.want80G && (
+                <div className="field"><label>PAN <span className="req">*</span></label>
+                  <input className="input" value={donor.pan} onChange={(e) => setDonor({ ...donor, pan: e.target.value.toUpperCase() })} placeholder="ABCDE1234F" maxLength={10} />
+                  {donor.pan && !PAN_RE.test(donor.pan) && <span className="field__err">Enter a valid PAN (e.g. ABCDE1234F)</span>}</div>
+              )}
               <label style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: '.92rem' }}>
                 <input type="checkbox" checked={donor.anon} onChange={(e) => setDonor({ ...donor, anon: e.target.checked })} /> Donate anonymously (we'll hide your name in public lists)
               </label>
@@ -192,7 +201,8 @@ export default function Donate() {
               <div className="receipt" style={{ marginBottom: 20 }}>
                 <div className="receipt-row"><span>Cause</span><b>{causeTitle}</b></div>
                 <div className="receipt-row"><span>Donor</span><b>{donor.name}</b></div>
-                <div className="receipt-row"><span>PAN</span><b>{donor.pan}</b></div>
+                {donor.want80G && donor.pan && <div className="receipt-row"><span>PAN</span><b>{donor.pan}</b></div>}
+                <div className="receipt-row"><span>80G receipt</span><b>{donor.want80G ? 'Yes' : 'No'}</b></div>
                 {ref && <div className="receipt-row"><span>Referred by</span><b>{ref}</b></div>}
                 <div className="receipt-row"><span>Amount</span><b>{formatINR(finalAmount)}</b></div>
               </div>
