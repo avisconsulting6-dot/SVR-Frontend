@@ -20,8 +20,8 @@ export default function Events() {
       <header className="page-head">
         <div className="container">
           <div className="page-head__inner">
-            <div className="breadcrumb"><Link to="/">Home</Link> / <span>Events</span></div>
-            <h1>Fundraising events</h1>
+            <div className="breadcrumb"><Link to="/">Home</Link> / <span>Campaigns</span></div>
+            <h1>Fundraising Campaigns</h1>
             <p className="lead">Urgent appeals and community drives — every rupee goes to the cause, with an 80G receipt.</p>
           </div>
         </div>

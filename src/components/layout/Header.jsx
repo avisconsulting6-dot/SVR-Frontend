@@ -20,7 +20,7 @@ const MEDIA = [
   { label: 'Photo Gallery', to: '/gallery' },
   { label: 'Video Gallery', to: '/gallery/video' },
   { label: 'Blog', to: '/blog' },
-  { label: 'Events', to: '/events' },
+  { label: 'Campaigns', to: '/campaigns' },
   { label: 'Achievements', to: '/achievements' },
 ]
 

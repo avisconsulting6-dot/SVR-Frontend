@@ -86,6 +86,7 @@ const soft = (promise, fallback) => promise.catch(() => fallback);
 export const api = {
   /* ---------------- auth ---------------- */
   register: (payload) => request('/api/auth/register', { method: 'POST', body: payload }),
+  forgotPassword: (payload) => request('/api/auth/forgot-password', { method: 'POST', body: payload }),
   async login(email, password) {
     const data = await request('/api/auth/login', { method: 'POST', body: { email, password } });
     setToken(data.accessToken);

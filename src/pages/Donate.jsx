@@ -170,7 +170,7 @@ export default function Donate() {
               <h3 style={{ marginBottom: 6 }}>Your details</h3>
               <p className="muted" style={{ marginBottom: 20 }}>Your details for the donation. PAN is only needed if you want an 80G tax receipt.</p>
               <div className="field"><label>Full name <span className="req">*</span></label>
-                <input className="input" value={donor.name} onChange={(e) => setDonor({ ...donor, name: e.target.value })} placeholder="As per PAN" /></div>
+                <input className="input" value={donor.name} onChange={(e) => setDonor({ ...donor, name: e.target.value })} placeholder="Enter your Name" /></div>
               <div className="row-2">
                 <div className="field"><label>Email <span className="req">*</span></label>
                   <input className="input" type="email" value={donor.email} onChange={(e) => setDonor({ ...donor, email: e.target.value })} placeholder="you@example.com" /></div>

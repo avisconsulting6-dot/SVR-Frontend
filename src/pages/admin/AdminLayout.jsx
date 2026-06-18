@@ -10,7 +10,7 @@ const MENU = [
   { to: '/admin/products', label: 'Products', icon: 'box' },
   { to: '/admin/orders', label: 'Orders', icon: 'cart' },
   { to: '/admin/blogs', label: 'Blog', icon: 'doc' },
-  { to: '/admin/events', label: 'Events', icon: 'calendar' },
+  { to: '/admin/campaigns', label: 'Campaigns', icon: 'calendar' },
   { to: '/admin/gallery', label: 'Gallery', icon: 'image' },
   { to: '/admin/volunteers', label: 'Volunteers', icon: 'person' },
   { to: '/admin/internships', label: 'Internships', icon: 'cap' },
