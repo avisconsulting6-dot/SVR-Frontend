@@ -273,12 +273,12 @@ export default function Login() {
                       padding: 0, display: 'flex', alignItems: 'center',
                       color: 'var(--muted, #888)',
                     }}
-                    onClick={() => setRegVisible((v) => !v)}
+                    onClick={() => setRegVisible((v) =>!v)} 
                     tabIndex={-1}
-                    aria-label={regVisible ? 'Hide password' : 'Show password'}
+                    aria-label={setRegVisible ? 'Hide password' : 'Show password'}
                   >
-                    {regVisible
-                      ? Icon.Passwordvisible({ width: 18, height: 18 })
+                   {setRegVisible
+                      ? Icon.passwordvisible({ width: 18, height: 18 })
                       : Icon.passwordhidden({ width: 18, height: 18 })}
                   </button>
                 </div>

@@ -180,6 +180,7 @@ function VolunteerTarget() {
     : { badge: 'badge--saffron', label: 'Challenge in progress' }
 
   const dn = target?.donations
+  const pr = target?.products          // { referred, required, percent, sold } | { sold }
   const pct = dn?.percent ?? 0
 
   return (
@@ -187,9 +188,9 @@ function VolunteerTarget() {
       <div className="grid grid-4" style={{ marginBottom: 24 }}>
         <StatCard icon="rupee" label="Donations referred" value={formatINR(dn?.referred ?? 0)}
           color="var(--green)" sub={`of ${formatINR(dn?.required ?? 0)} target`} />
-        <StatCard icon="target" label="Remaining to target" value={formatINR(dn?.remaining ?? 0)}
-          color="var(--saffron)" sub={dn?.remaining === 0 ? 'Target reached!' : undefined} />
-        <StatCard icon="clock" label="Time remaining" value={isActive ? '—' : countdown} color="var(--blue)"
+        <StatCard icon="grid" label="Product sales referred" value={formatINR(pr?.referred ?? 0)}
+          color="var(--blue)" sub={pr?.required > 0 ? `of ${formatINR(pr.required)} target` : `${pr?.sold ?? 0} items sold`} />
+        <StatCard icon="clock" label="Time remaining" value={isActive ? '—' : countdown} color="var(--saffron)"
           sub={!isActive && hasWindow ? `Ends ${formatDate(target.endsAt)}` : isActive ? 'Activated' : undefined} />
         <StatCard icon="wallet" label="Wallet balance" value={formatINR(wallet?.balance ?? 0)} color="#a855f7"
           sub={commission?.earned > 0 ? `${formatINR(commission.earned)} earned` : undefined} />
@@ -217,18 +218,25 @@ function VolunteerTarget() {
           <div className="muted" style={{ fontSize: '.8rem', marginTop: 8 }}>
             {formatINR(dn?.referred ?? 0)} raised · {formatINR(dn?.remaining ?? 0)} to go
           </div>
-          {/* product target, only if admin enabled it */}
-          {target?.products?.required > 0 && (
-            <div style={{ marginTop: 18 }}>
-              <div className="muted" style={{ fontSize: '.85rem', marginBottom: 6 }}>Shop sales target ({target.rule === 'both' ? 'both required' : 'either counts'})</div>
-              <div style={{ height: 10, background: 'var(--paper-2)', borderRadius: 99, overflow: 'hidden' }}>
-                <div style={{ width: `${target.products.percent}%`, height: '100%', borderRadius: 99, background: 'var(--blue)' }} />
-              </div>
-              <div className="muted" style={{ fontSize: '.8rem', marginTop: 8 }}>
-                {formatINR(target.products.referred)} of {formatINR(target.products.required)}
-              </div>
+          {/* product sales target */}
+          <div style={{ marginTop: 20, paddingTop: 18, borderTop: '1px solid var(--line)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <span className="muted" style={{ fontSize: '.85rem' }}>
+                Shop sales referred{pr?.required > 0 ? <> ({target.rule === 'both' ? 'both targets required' : 'either target activates'})</> : ' (no target set)'}
+              </span>
+              {pr?.required > 0 && (
+                <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '.95rem', color: 'var(--blue)' }}>{pr.percent}%</span>
+              )}
             </div>
-          )}
+            <div style={{ height: 10, background: 'var(--paper-2)', borderRadius: 99, overflow: 'hidden' }}>
+              <div style={{ width: `${pr?.percent ?? 0}%`, height: '100%', borderRadius: 99, background: 'var(--blue)', transition: 'width .6s cubic-bezier(.22,1,.36,1)' }} />
+            </div>
+            <div className="muted" style={{ fontSize: '.8rem', marginTop: 8 }}>
+              {pr?.required > 0
+                ? <>{formatINR(pr.referred)} of {formatINR(pr.required)} · share your shop link to sell products</>
+                : <>{formatINR(pr?.referred ?? 0)} in sales · {pr?.sold ?? 0} items via your shop link</>}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -249,6 +257,13 @@ function VolunteerTarget() {
               <input className="input" readOnly value={profile.shopLink} />
               <button className="btn btn--ghost" onClick={() => copy('shop', profile.shopLink)}>{copied === 'shop' ? 'Copied!' : 'Copy'}</button>
             </div>
+          </div>
+          <div className="field"><label>Invite / signup link</label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input className="input" readOnly value={profile.signupLink} />
+              <button className="btn btn--ghost" onClick={() => copy('signup', profile.signupLink)}>{copied === 'signup' ? 'Copied!' : 'Copy'}</button>
+            </div>
+            <span className="field__hint">New accounts created via this link are linked to you.</span>
           </div>
         </div>
 
@@ -415,8 +430,13 @@ function WalletReferral() {
     api.getReferrals().then(setRef).catch(() => {})
   }, [])
 
-  const link = ref ? `${window.location.origin}/donate?ref=${ref.referralCode}` : ''
-  function copy() { navigator.clipboard?.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 1800) }
+  const donateLink = ref ? `${window.location.origin}/donate?ref=${ref.referralCode}` : ''
+  const shopLink = ref ? `${window.location.origin}/store?ref=${ref.referralCode}` : ''
+  function copy(which) {
+    const link = which === 'shop' ? shopLink : donateLink
+    navigator.clipboard?.writeText(link)
+    setCopied(which); setTimeout(() => setCopied(false), 1800)
+  }
 
   return (
     <>
@@ -434,11 +454,20 @@ function WalletReferral() {
             Share your code. When a friend makes their first donation through it, you earn <b>10%</b> and they earn <b>5%</b> of it as coins.
           </p>
           <div className="field"><label>Your referral code</label>
+            <input className="input" readOnly value={ref?.referralCode || '…'} style={{ fontFamily: 'var(--font-display)', fontWeight: 700, letterSpacing: '.1em' }} />
+          </div>
+          <div className="field"><label>Donation link</label>
             <div style={{ display: 'flex', gap: 8 }}>
-              <input className="input" readOnly value={ref?.referralCode || '…'} style={{ fontFamily: 'var(--font-display)', fontWeight: 700, letterSpacing: '.1em' }} />
-              <button className="btn btn--ghost" onClick={copy}>{copied ? 'Copied!' : 'Copy link'}</button>
+              <input className="input" readOnly value={donateLink} />
+              <button className="btn btn--ghost" onClick={() => copy('donate')}>{copied === 'donate' ? 'Copied!' : 'Copy'}</button>
             </div>
-            <span className="field__hint">{link}</span>
+          </div>
+          <div className="field"><label>Shop link</label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input className="input" readOnly value={shopLink} />
+              <button className="btn btn--ghost" onClick={() => copy('shop')}>{copied === 'shop' ? 'Copied!' : 'Copy'}</button>
+            </div>
+            <span className="field__hint">Share to earn on donations and shop orders made through your links.</span>
           </div>
         </div>
 
