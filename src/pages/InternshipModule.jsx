@@ -23,10 +23,17 @@ export default function InternshipModule() {
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
-    setLoading(true)
+  setLoading(true)
+  try {
     const [p, a] = await Promise.all([api.admin.internships(), api.admin.internApplications()])
-    setPostings(p || []); setApplications(a || []); setLoading(false)
-  }, [])
+    setPostings(p || [])
+    setApplications(a || [])
+  } catch (e) {
+    console.error('Failed to load internships:', e)
+  } finally {
+    setLoading(false)  // always runs, never stays stuck
+  }
+}, [])
   useEffect(() => { load() }, [load])
 
   const pending = applications.filter((a) => a.status === 'applied').length
@@ -93,7 +100,7 @@ function Postings({ postings, onChanged }) {
                         <button className="icon-btn icon-btn--danger" title="Delete" onClick={async () => {
                           if (!confirm(`Delete "${p.title}"?`)) return
                           try {
-                            await api.admin.remove('internships', p._id); 
+                            await api.admin.deleteInternship(p._id);
                             onChanged()
                           } catch (e) { alert(e.message) }
                         }}><Icon.trash width={16} height={16} /></button>
@@ -125,11 +132,11 @@ function PostingModal({ posting, onClose, onSaved }) {
     if (!f.title.trim()) return setErr('Title is required.')
     setBusy(true); setErr('')
     try {
-      if (posting) {
-        await api.admin.update('internships', posting._id, f)
-      } else {
-        await api.admin.create('internships', f)
-      }
+     if (posting) {
+  await api.admin.updateInternship(posting._id, f)   // not api.admin.update('internships', ...)
+} else {
+  await api.admin.createInternship(f)                // not api.admin.create('internships', ...)
+}
       onSaved()
     } catch (e) { setErr(e.message); setBusy(false) }
   }
@@ -226,7 +233,6 @@ function Applications({ applications, onChanged }) {
 
 /* ---------------- Interns: approved people + task assignment ---------------- */
 function Interns({ applications }) {
-  const interns = applications.filter((a) => a.status === 'approved')
   const [users, setUsers] = useState([])
   const [tasks, setTasks] = useState([])
   const [assigning, setAssigning] = useState(null)   // user object
