@@ -133,7 +133,6 @@ export const api = {
   getStats: () => soft(request('/api/stats').then((d) => d.stats), null),
   getCauses: () => soft(request('/api/causes').then((d) => d.causes), []),
   getCause: (slug) => soft(request(`/api/causes/${slug}`).then((d) => d.cause), null),
-  // Shop catalogue — real products from the admin panel.
   getProducts: () => soft(request('/api/products').then((d) => d.products), []),
   getProduct: (slug) => request(`/api/products/${slug}`).then((d) => d.product),
   getEvents: () => soft(request('/api/events').then((d) => d.events), []),
@@ -141,12 +140,8 @@ export const api = {
   getBlog: (id) => soft(request(`/api/blogs/${id}`).then((d) => d.post), null),
   getGallery: (album) => soft(request(`/api/gallery${album ? `?album=${album}` : ''}`).then((d) => d.images || []), []),
   internships: () => soft(request('/api/internships').then((d) => d.internships), []),
-createInternship: (payload) => 
-  request('/api/admin/internships', { method: 'POST', body: payload }).then((d) => d.internship),
-updateInternship: (id, payload) =>
-  request(`/api/admin/internships/${id}`, { method: 'PATCH', body: payload }).then((d) => d.internship),
-deleteInternship: (id) =>
-  request(`/api/admin/internships/${id}`, { method: 'DELETE' }),
+  applyInternship: (id, payload) =>
+    request(`/api/internships/${id}/apply`, { method: 'POST', body: payload }),
 };
 
 /* ================== admin console ================== */
@@ -227,10 +222,13 @@ api.admin = {
     request(`/api/admin/withdrawals/${id}`, { method: 'PATCH', body: { status, adminNote } }).then((d) => d.withdrawal),
 
   internships: () => request('/api/admin/internships').then((d) => d.internships),
-  internApplications: (params = '') => request(`/api/admin/intern-applications${params}`).then((d) => d.applications),
-  approveApplication: (id) => request(`/api/admin/intern-applications/${id}/approve`, { method: 'POST' }),
-  rejectApplication: (id) => request(`/api/admin/intern-applications/${id}/reject`, { method: 'POST' }),
-
+  createInternship: (payload) =>
+    request('/api/admin/internships', { method: 'POST', body: payload }).then((d) => d.internship),
+  updateInternship: (id, payload) =>
+    request(`/api/admin/internships/${id}`, { method: 'PATCH', body: payload }).then((d) => d.internship),
+  deleteInternship: (id) =>
+    request(`/api/admin/internships/${id}`, { method: 'DELETE' }),
+  
   tasks: (params = '') => request(`/api/admin/tasks${params}`).then((d) => d.tasks),
   createTask: (payload) => request('/api/admin/tasks', { method: 'POST', body: payload }),
   updateTask: (id, payload) => request(`/api/admin/tasks/${id}`, { method: 'PATCH', body: payload }),
