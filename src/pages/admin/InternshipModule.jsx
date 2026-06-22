@@ -92,7 +92,7 @@ function Postings({ postings, onChanged }) {
                         <button className="icon-btn" title="Edit" onClick={() => setEditing(p)}><Icon.pencil width={16} height={16} /></button>
                         <button className="icon-btn icon-btn--danger" title="Delete" onClick={async () => {
                           if (!confirm(`Delete "${p.title}"?`)) return
-                              await api.admin.deleteInternship(p._id); onChanged()
+                          await fetchAdmin(`/internships/${p._id}`, 'DELETE'); onChanged()
                         }}><Icon.trash width={16} height={16} /></button>
                       </div>
                     </td>
@@ -107,6 +107,19 @@ function Postings({ postings, onChanged }) {
   )
 }
 
+async function fetchAdmin(path, method = 'GET', body) {
+  const BASE = import.meta.env.VITE_API_URL ;
+  const headers = { 'Content-Type': 'application/json' }
+  const token = localStorage.getItem('svr_token')
+  if (token) headers.Authorization = `Bearer ${token}`
+  const res = await fetch(`${BASE}/api/admin${path}`, {
+    method, headers, credentials: 'include',
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  })
+  const data = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(data?.error || `Request failed (${res.status})`)
+  return data
+}
 
 function PostingModal({ posting, onClose, onSaved }) {
   const [f, setF] = useState({
@@ -123,8 +136,8 @@ function PostingModal({ posting, onClose, onSaved }) {
     if (!f.title.trim()) return setErr('Title is required.')
     setBusy(true); setErr('')
     try {
-      if (posting) await api.admin.updateInternship(posting._id, f)
-      else await api.admin.createInternship(f)
+      if (posting) await fetchAdmin(`/internships/${posting._id}`, 'PATCH', f)
+      else await fetchAdmin('/internships', 'POST', f)
       onSaved()
     } catch (e) { setErr(e.message); setBusy(false) }
   }
@@ -221,6 +234,7 @@ function Applications({ applications, onChanged }) {
 
 /* ---------------- Interns: approved people + task assignment ---------------- */
 function Interns({ applications }) {
+  const interns = applications.filter((a) => a.status === 'approved')
   const [users, setUsers] = useState([])
   const [tasks, setTasks] = useState([])
   const [assigning, setAssigning] = useState(null)   // user object

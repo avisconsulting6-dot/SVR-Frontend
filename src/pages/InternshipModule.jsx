@@ -23,36 +23,41 @@ export default function InternshipModule() {
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
-  setLoading(true)
-  try {
-    const [p, a] = await Promise.all([api.admin.internships(), api.admin.internApplications()])
-    setPostings(p || [])
-    setApplications(a || [])
-  } catch (e) {
-    console.error('Failed to load internships:', e)
-  } finally {
-    setLoading(false)  // always runs, never stays stuck
-  }
-}, [])
+    setLoading(true)
+    try {
+      const [p, a] = await Promise.all([api.admin.internships(), api.admin.internApplications()])
+      // Force array fallback in case the API resolves an object wrapper
+      setPostings(Array.isArray(p) ? p : p?.data || [])
+      setApplications(Array.isArray(a) ? a : a?.data || [])
+    } catch (e) {
+      console.error('Failed to load internships:', e)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
   useEffect(() => { load() }, [load])
 
-  const pending = applications.filter((a) => a.status === 'applied').length
+  const safeApplications = Array.isArray(applications) ? applications : []
+  const pending = safeApplications.filter((a) => a.status === 'applied').length
 
   return (
     <>
-      <div className="admin__head">
-        <div><h1>Internship management</h1><p className="muted" style={{ fontSize: '.9rem' }}>Postings, applications &amp; intern tasks</p></div>
+      <div className="admin__head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h1>Internship management</h1>
+          <p className="muted" style={{ fontSize: '.9rem' }}>Postings, applications &amp; intern tasks</p>
+        </div>
         <button className="btn btn--ghost btn--sm" onClick={() => api.admin.downloadInternsCsv().catch((e) => alert(e.message))}>
-          <Icon.doc width={15} height={15} /> Interns CSV
+          {Icon?.doc ? <Icon.doc width={15} height={15} /> : null} Interns CSV
         </button>
       </div>
 
       <div className="pill-row" style={{ marginBottom: 20 }}>
         {TABS.map((t) => {
-          const I = Icon[t.icon]
+          const I = Icon?.[t.icon]
           return (
             <button key={t.key} className={`filter-pill ${tab === t.key ? 'active' : ''}`} onClick={() => setParams({ tab: t.key })}>
-              <I width={15} height={15} /> {t.label}
+              {I ? <I width={15} height={15} /> : null} {t.label}
               {t.key === 'applications' && pending > 0 && <b style={{ marginLeft: 6 }}>({pending})</b>}
             </button>
           )
@@ -62,8 +67,8 @@ export default function InternshipModule() {
       {loading ? <p className="muted">Loading…</p> : (
         <>
           {tab === 'postings' && <Postings postings={postings} onChanged={load} />}
-          {tab === 'applications' && <Applications applications={applications} onChanged={load} />}
-          {tab === 'interns' && <Interns applications={applications} />}
+          {tab === 'applications' && <Applications applications={postings} onChanged={load} />}
+          {tab === 'interns' && <Interns applications={postings} />}
         </>
       )}
     </>
@@ -73,20 +78,31 @@ export default function InternshipModule() {
 /* ---------------- Postings: CRUD ---------------- */
 function Postings({ postings, onChanged }) {
   const [editing, setEditing] = useState(null)
+  const safePostings = Array.isArray(postings) ? postings : []
 
   return (
     <>
-      <div className="admin__head" style={{ marginBottom: 12 }}>
-        <p className="muted" style={{ fontSize: '.9rem' }}>{postings.length} posting{postings.length !== 1 ? 's' : ''}</p>
-        <button className="btn btn--primary btn--sm" onClick={() => setEditing('new')}><Icon.doc width={15} height={15} /> New posting</button>
+      {/* Explicit flex layout to prevent button from getting squished or hidden */}
+      <div className="admin__head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <p className="muted" style={{ fontSize: '.9rem', margin: 0 }}>
+          {safePostings.length} posting{safePostings.length !== 1 ? 's' : ''}
+        </p>
+        <button className="btn btn--primary btn--sm" style={{ flexShrink: 0 }} onClick={() => setEditing('new')}>
+          {Icon?.doc ? <Icon.doc width={15} height={15} style={{ marginRight: 4 }} /> : null} New posting
+        </button>
       </div>
+      
       <div className="card admin__panel" style={{ padding: 0 }}>
         <div style={{ overflowX: 'auto' }}>
           <table className="dtable">
-            <thead><tr><th>Title</th><th>Track</th><th>Duration</th><th>Location</th><th>Applications</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead>
+              <tr><th>Title</th><th>Track</th><th>Duration</th><th>Location</th><th>Applications</th><th>Status</th><th>Actions</th></tr>
+            </thead>
             <tbody>
-              {postings.length === 0 ? <tr><td colSpan={7} className="muted" style={{ padding: 20 }}>No postings yet.</td></tr>
-                : postings.map((p) => (
+              {safePostings.length === 0 ? (
+                <tr><td colSpan={7} className="muted" style={{ padding: 20 }}>No postings yet.</td></tr>
+              ) : (
+                safePostings.map((p) => (
                   <tr key={p._id}>
                     <td><b>{p.title}</b></td>
                     <td><span className="badge badge--blue">{p.track}</span></td>
@@ -96,18 +112,23 @@ function Postings({ postings, onChanged }) {
                     <td><span className={`badge ${p.isOpen ? 'badge--green' : ''}`}>{p.isOpen ? 'Open' : 'Closed'}</span></td>
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>
-                        <button className="icon-btn" title="Edit" onClick={() => setEditing(p)}><Icon.pencil width={16} height={16} /></button>
+                        <button className="icon-btn" title="Edit" onClick={() => setEditing(p)}>
+                          {Icon?.pencil ? <Icon.pencil width={16} height={16} /> : 'Edit'}
+                        </button>
                         <button className="icon-btn icon-btn--danger" title="Delete" onClick={async () => {
                           if (!confirm(`Delete "${p.title}"?`)) return
                           try {
                             await api.admin.deleteInternship(p._id);
                             onChanged()
                           } catch (e) { alert(e.message) }
-                        }}><Icon.trash width={16} height={16} /></button>
+                        }} border-style="none">
+                          {Icon?.trash ? <Icon.trash width={16} height={16} /> : 'X'}
+                        </button>
                       </div>
                     </td>
                   </tr>
-                ))}
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -132,11 +153,11 @@ function PostingModal({ posting, onClose, onSaved }) {
     if (!f.title.trim()) return setErr('Title is required.')
     setBusy(true); setErr('')
     try {
-     if (posting) {
-  await api.admin.updateInternship(posting._id, f)   // not api.admin.update('internships', ...)
-} else {
-  await api.admin.createInternship(f)                // not api.admin.create('internships', ...)
-}
+      if (posting) {
+        await api.admin.updateInternship(posting._id, f)
+      } else {
+        await api.admin.createInternship(f)
+      }
       onSaved()
     } catch (e) { setErr(e.message); setBusy(false) }
   }
@@ -175,7 +196,9 @@ const APP_BADGE = { applied: 'badge--blue', approved: 'badge--green', rejected: 
 function Applications({ applications, onChanged }) {
   const [filter, setFilter] = useState('applied')
   const [busy, setBusy] = useState(null)
-  const list = applications.filter((a) => filter === 'all' || a.status === filter)
+  
+  const safeApps = Array.isArray(applications) ? applications : []
+  const list = safeApps.filter((a) => filter === 'all' || a.status === filter)
 
   async function act(a, action) {
     if (!confirm(`${action === 'approve' ? 'Approve' : 'Reject'} ${a.name}'s application?`)) return
@@ -192,7 +215,7 @@ function Applications({ applications, onChanged }) {
       <div className="pill-row" style={{ marginBottom: 14 }}>
         {['applied', 'approved', 'rejected', 'all'].map((s) => (
           <button key={s} className={`filter-pill ${filter === s ? 'active' : ''}`} onClick={() => setFilter(s)}>
-            {s === 'all' ? `All (${applications.length})` : `${s[0].toUpperCase() + s.slice(1)} (${applications.filter((a) => a.status === s).length})`}
+            {s === 'all' ? `All (${safeApps.length})` : `${s[0].toUpperCase() + s.slice(1)} (${safeApps.filter((a) => a.status === s).length})`}
           </button>
         ))}
       </div>
@@ -224,7 +247,7 @@ function Applications({ applications, onChanged }) {
           </table>
         </div>
       </div>
-      {applications.some((a) => a.message) && filter === 'applied' && (
+      {safeApps.some((a) => a.message) && filter === 'applied' && (
         <p className="muted" style={{ fontSize: '.8rem', marginTop: 10 }}>Tip: approving sends the candidate a set-password email and creates their intern account.</p>
       )}
     </>
@@ -235,15 +258,17 @@ function Applications({ applications, onChanged }) {
 function Interns({ applications }) {
   const [users, setUsers] = useState([])
   const [tasks, setTasks] = useState([])
-  const [assigning, setAssigning] = useState(null)   // user object
+  const [assigning, setAssigning] = useState(null)
 
   const load = () => Promise.all([
-    api.admin.users('?role=intern').then(setUsers),
-    api.admin.tasks('?role=intern').then(setTasks),
+    api.admin.users('?role=intern').then((res) => setUsers(Array.isArray(res) ? res : [])),
+    api.admin.tasks('?role=intern').then((res) => setTasks(Array.isArray(res) ? res : [])),
   ]).catch(() => {})
   useEffect(() => { load() }, [])
 
-  const tasksFor = (userId) => tasks.filter((t) => String(t.assignee?.id) === String(userId))
+  const safeTasks = Array.isArray(tasks) ? tasks : []
+  const safeUsers = Array.isArray(users) ? users : []
+  const tasksFor = (userId) => safeTasks.filter((t) => String(t.assignee?.id) === String(userId))
 
   return (
     <>
@@ -252,8 +277,8 @@ function Interns({ applications }) {
           <table className="dtable">
             <thead><tr><th>Intern</th><th>Account</th><th>Tasks</th><th>Actions</th></tr></thead>
             <tbody>
-              {users.length === 0 ? <tr><td colSpan={4} className="muted" style={{ padding: 20 }}>No intern accounts yet — approve applications first.</td></tr>
-                : users.map((u) => {
+              {safeUsers.length === 0 ? <tr><td colSpan={4} className="muted" style={{ padding: 20 }}>No intern accounts yet — approve applications first.</td></tr>
+                : safeUsers.map((u) => {
                   const ts = tasksFor(u.id)
                   const open = ts.filter((t) => t.status !== 'completed').length
                   return (
@@ -270,15 +295,14 @@ function Interns({ applications }) {
         </div>
       </div>
 
-      {/* all intern tasks */}
       <div className="card admin__panel" style={{ marginTop: 22, padding: 0 }}>
         <div className="admin__panel-head" style={{ padding: '18px 18px 0' }}><h4>All intern tasks</h4></div>
         <div style={{ overflowX: 'auto' }}>
           <table className="dtable">
             <thead><tr><th>Task</th><th>Assigned to</th><th>Deadline</th><th>Status</th><th></th></tr></thead>
             <tbody>
-              {tasks.length === 0 ? <tr><td colSpan={5} className="muted" style={{ padding: 20 }}>No tasks yet.</td></tr>
-                : tasks.map((t) => (
+              {safeTasks.length === 0 ? <tr><td colSpan={5} className="muted" style={{ padding: 20 }}>No tasks yet.</td></tr>
+                : safeTasks.map((t) => (
                   <tr key={t.id}>
                     <td><b>{t.title}</b>{t.description && <div className="muted" style={{ fontSize: '.78rem' }}>{t.description.slice(0, 60)}</div>}</td>
                     <td>{t.assignee?.name || '—'}</td>
@@ -289,7 +313,11 @@ function Interns({ applications }) {
                         {['assigned', 'in_progress', 'submitted', 'completed'].map((s) => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
                       </select>
                     </td>
-                    <td><button className="icon-btn icon-btn--danger" title="Delete" onClick={async () => { if (confirm('Delete task?')) { await api.admin.deleteTask(t.id); load() } }}><Icon.trash width={14} height={14} /></button></td>
+                    <td>
+                      <button className="icon-btn icon-btn--danger" title="Delete" onClick={async () => { if (confirm('Delete task?')) { await api.admin.deleteTask(t.id); load() } }}>
+                        {Icon?.trash ? <Icon.trash width={14} height={14} /> : 'X'}
+                      </button>
+                    </td>
                   </tr>
                 ))}
             </tbody>
