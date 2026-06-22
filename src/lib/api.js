@@ -226,6 +226,7 @@ api.admin = {
   internApplications: (params = '') => request(`/api/admin/intern-applications${params}`).then((d) => d.applications),
   approveApplication: (id) => request(`/api/admin/intern-applications/${id}/approve`, { method: 'POST' }),
   rejectApplication: (id) => request(`/api/admin/intern-applications/${id}/reject`, { method: 'POST' }),
+  deleteInternship: (id) => request(`/api/admin/internships/${id}`, { method: 'DELETE' }),
 
   tasks: (params = '') => request(`/api/admin/tasks${params}`).then((d) => d.tasks),
   createTask: (payload) => request('/api/admin/tasks', { method: 'POST', body: payload }),

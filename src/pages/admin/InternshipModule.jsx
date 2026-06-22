@@ -92,7 +92,7 @@ function Postings({ postings, onChanged }) {
                         <button className="icon-btn" title="Edit" onClick={() => setEditing(p)}><Icon.pencil width={16} height={16} /></button>
                         <button className="icon-btn icon-btn--danger" title="Delete" onClick={async () => {
                           if (!confirm(`Delete "${p.title}"?`)) return
-                          await fetchAdmin(`/internships/${p._id}`, 'DELETE'); onChanged()
+                          try { await api.admin.deleteInternship(p._id); onChanged() } catch (e) { alert(e.message) }
                         }}><Icon.trash width={16} height={16} /></button>
                       </div>
                     </td>
@@ -112,7 +112,7 @@ async function fetchAdmin(path, method = 'GET', body) {
   const headers = { 'Content-Type': 'application/json' }
   const token = localStorage.getItem('svr_token')
   if (token) headers.Authorization = `Bearer ${token}`
-  const res = await fetch(`${BASE}/api/admin${path}`, {
+  const res = await fetch(`${BASE}/api/admin/${path}`, {
     method, headers, credentials: 'include',
     body: body !== undefined ? JSON.stringify(body) : undefined,
   })
