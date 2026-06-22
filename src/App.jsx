@@ -77,7 +77,7 @@ export default function App() {
         <Route path="causes" element={<ResourceManager resource="causes" title="Causes" icon="heart" config={RESOURCE_CONFIG.causes} />} />
         <Route path="products" element={<ResourceManager resource="products" title="Products" icon="cart" config={RESOURCE_CONFIG.products} />} />
         <Route path="blogs" element={<ResourceManager resource="blogs" title="Blog posts" icon="doc" config={RESOURCE_CONFIG.blogs} />} />
-        <Route path="campaigns" element={<ResourceManager resource="campaigns" title="Campaigns" icon="bell" config={RESOURCE_CONFIG.events} />} />
+        <Route path="events" element={<ResourceManager resource="events" title="Campaigns" icon="bell" config={RESOURCE_CONFIG.events} />} />
         <Route path="gallery" element={<ResourceManager resource="gallery" title="Gallery" icon="grid" config={RESOURCE_CONFIG.gallery} />} />
         <Route path="donations" element={<AdminDonations />} />
         <Route path="settings" element={<AdminSettings />} />

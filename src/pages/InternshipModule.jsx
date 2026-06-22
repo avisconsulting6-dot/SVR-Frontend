@@ -92,7 +92,10 @@ function Postings({ postings, onChanged }) {
                         <button className="icon-btn" title="Edit" onClick={() => setEditing(p)}><Icon.pencil width={16} height={16} /></button>
                         <button className="icon-btn icon-btn--danger" title="Delete" onClick={async () => {
                           if (!confirm(`Delete "${p.title}"?`)) return
-                          await fetchAdmin(`/internships/${p._id}`, 'DELETE'); onChanged()
+                          try {
+                            await api.admin.remove('internships', p._id); 
+                            onChanged()
+                          } catch (e) { alert(e.message) }
                         }}><Icon.trash width={16} height={16} /></button>
                       </div>
                     </td>
@@ -105,20 +108,6 @@ function Postings({ postings, onChanged }) {
       {editing && <PostingModal posting={editing === 'new' ? null : editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); onChanged() }} />}
     </>
   )
-}
-
-async function fetchAdmin(path, method = 'GET', body) {
-  const BASE = import.meta.env.VITE_API_URL || ''
-  const headers = { 'Content-Type': 'application/json' }
-  const token = localStorage.getItem('svr_token')
-  if (token) headers.Authorization = `Bearer ${token}`
-  const res = await fetch(`${BASE}/api/admin${path}`, {
-    method, headers, credentials: 'include',
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  })
-  const data = await res.json().catch(() => null)
-  if (!res.ok) throw new Error(data?.error || `Request failed (${res.status})`)
-  return data
 }
 
 function PostingModal({ posting, onClose, onSaved }) {
@@ -136,8 +125,11 @@ function PostingModal({ posting, onClose, onSaved }) {
     if (!f.title.trim()) return setErr('Title is required.')
     setBusy(true); setErr('')
     try {
-      if (posting) await fetchAdmin(`/internships/${posting._id}`, 'PATCH', f)
-      else await fetchAdmin('/internships', 'POST', f)
+      if (posting) {
+        await api.admin.update('internships', posting._id, f)
+      } else {
+        await api.admin.create('internships', f)
+      }
       onSaved()
     } catch (e) { setErr(e.message); setBusy(false) }
   }
