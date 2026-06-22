@@ -141,8 +141,12 @@ export const api = {
   getBlog: (id) => soft(request(`/api/blogs/${id}`).then((d) => d.post), null),
   getGallery: (album) => soft(request(`/api/gallery${album ? `?album=${album}` : ''}`).then((d) => d.images || []), []),
   internships: () => soft(request('/api/internships').then((d) => d.internships), []),
-  applyInternship: (id, payload) =>
-    request(`/api/internships/${id}/apply`, { method: 'POST', body: payload }),
+createInternship: (payload) => 
+  request('/api/admin/internships', { method: 'POST', body: payload }).then((d) => d.internship),
+updateInternship: (id, payload) =>
+  request(`/api/admin/internships/${id}`, { method: 'PATCH', body: payload }).then((d) => d.internship),
+deleteInternship: (id) =>
+  request(`/api/admin/internships/${id}`, { method: 'DELETE' }),
 };
 
 /* ================== admin console ================== */
