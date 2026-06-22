@@ -223,6 +223,8 @@ api.admin = {
     request(`/api/admin/withdrawals/${id}`, { method: 'PATCH', body: { status, adminNote } }).then((d) => d.withdrawal),
 
   internships: () => request('/api/admin/internships').then((d) => d.internships),
+  createInternship: (payload) => request('/api/admin/internships', { method: 'POST', body: payload }),
+  updateInternship: (id, payload) => request(`/api/admin/internships/${id}`, { method: 'PATCH', body: payload }),
   internApplications: (params = '') => request(`/api/admin/intern-applications${params}`).then((d) => d.applications),
   approveApplication: (id) => request(`/api/admin/intern-applications/${id}/approve`, { method: 'POST' }),
   rejectApplication: (id) => request(`/api/admin/intern-applications/${id}/reject`, { method: 'POST' }),

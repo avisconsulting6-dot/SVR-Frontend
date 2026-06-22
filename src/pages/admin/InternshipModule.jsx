@@ -23,9 +23,14 @@ export default function InternshipModule() {
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
+    try{
     setLoading(true)
     const [p, a] = await Promise.all([api.admin.internships(), api.admin.internApplications()])
     setPostings(p || []); setApplications(a || []); setLoading(false)
+    }
+    catch(err){
+      alert('Failed to load internship data: ' + err.message)
+    }
   }, [])
   useEffect(() => { load() }, [load])
 
@@ -135,11 +140,11 @@ function PostingModal({ posting, onClose, onSaved }) {
   async function save() {
     if (!f.title.trim()) return setErr('Title is required.')
     setBusy(true); setErr('')
-    try {
-      if (posting) await fetchAdmin(`/internships/${posting._id}`, 'PATCH', f)
-      else await fetchAdmin('/internships', 'POST', f)
-      onSaved()
-    } catch (e) { setErr(e.message); setBusy(false) }
+  try{
+    if (posting) await api.admin.updateInternship(posting._id, f)
+    else await api.admin.createInternship(f)
+    onSaved()
+  } catch (e) { setErr(e.message); setBusy(false) }
   }
 
   return (
